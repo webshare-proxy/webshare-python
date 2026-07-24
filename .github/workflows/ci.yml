@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Ruff lint
+        run: uv run ruff check src tests snippets examples
+      - name: Ruff format
+        run: uv run ruff format --check src tests snippets examples
+      - name: Mypy (strict)
+        run: uv run mypy --strict src/webshare snippets tests
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run tests
+        run: uv run pytest -q
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Check metadata
+        run: uvx twine check dist/*
+      - name: Assert py.typed is shipped in the wheel
+        run: |
+          unzip -l dist/*.whl | grep "webshare/py.typed"
+
+  integration:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Run integration tests (only when the secret is available)
+        env:
+          WEBSHARE_API_KEY: ${{ secrets.WEBSHARE_API_KEY }}
+        run: |
+          if [ -z "$WEBSHARE_API_KEY" ]; then
+            echo "WEBSHARE_API_KEY secret not available; skipping integration tests."
+            exit 0
+          fi
+          uv run pytest -q tests/test_integration.py
