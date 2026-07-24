@@ -1,6 +1,8 @@
 """Integration test against the real API.
 
-Runs only when the ``WEBSHARE_API_KEY`` environment variable is set.
+Runs only when the ``WEBSHARE_API_KEY`` environment variable is set. The
+optional ``WEBSHARE_BASE_URL`` environment variable targets a non-production
+host (default: production).
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_profile_and_proxy_list() -> None:
-    with Webshare() as client:
+    with Webshare(base_url=os.environ.get("WEBSHARE_BASE_URL")) as client:
         profile = client.profile.get()
         assert profile.id > 0
         assert profile.email
