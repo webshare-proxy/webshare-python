@@ -39,6 +39,41 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+## Working with plans
+
+Most proxy operations are plan-scoped: they accept a `plan_id` and use an
+account default when it is omitted. The standard pattern is to list your
+plans, pick the one you want, and pass its id explicitly:
+
+```python
+with webshare.Webshare() as client:
+    plan = next(p for p in client.plans.list() if p.status == "active")
+
+    proxies = client.proxies.list(mode="direct", plan_id=plan.id)
+    config = client.proxy_config.get(plan_id=plan.id)
+    stats = client.proxy_config.get_stats(plan_id=plan.id)
+    status = client.proxy_config.get_status(plan_id=plan.id)
+    url = client.proxies.download_url(
+        config.proxy_list_download_token, plan_id=plan.id
+    )
+```
+
+The plan id is also visible in the dashboard URL when viewing a plan. The
+active plan of the subscription is `client.subscription.get().plan`.
+
+## Key functions
+
+| Function | Description |
+| --- | --- |
+| `client.plans.list()` | List your plans; the ids scope most other calls. |
+| `client.proxies.list(mode=..., plan_id=...)` | List proxies (paginated). |
+| `client.proxies.download(token, plan_id=...)` | Download the proxy list as `address:port:username:password` text. |
+| `client.proxy_config.get(plan_id=...)` | Get the proxy config (timeouts, IP-auth targeting, download token). |
+| `client.stats.aggregate(plan_id=...)` | Aggregate proxy usage stats for a period. |
+| `webshare.build_proxy_url(...)` | Build proxy connection URLs (backbone sessions/rotation or direct mode). |
+
+See [REFERENCE.md](REFERENCE.md) for every method.
+
 ## Authentication
 
 Pass the API key explicitly, or set the `WEBSHARE_API_KEY` environment
@@ -174,6 +209,14 @@ url = build_proxy_url(
 `client.proxies.download_url`) builds the unauthenticated proxy list download
 URL from the config's `proxy_list_download_token`;
 `client.proxies.download(...)` fetches it directly and returns the text.
+
+## Identification header
+
+Every request carries an `X-Webshare-Source` header identifying the caller
+for API-side tracking. It names only the SDK and the Python runtime version
+(default `WebshareSDK/<version> (Python; <python version>)`) — no user data.
+Tools built on the SDK can replace it via the `source` client option, and
+per-request headers override it as usual.
 
 ## Supported versions
 
