@@ -5,14 +5,25 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.6.14"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.0
         with:
           python-version: "3.12"
+      - name: Install uv
+        run: pip install "uv==${UV_VERSION}"
+      - name: Sync dependencies
+        run: uv sync --group dev
       - name: Ruff lint
         run: uv run ruff check src tests snippets examples
       - name: Ruff format
@@ -27,24 +38,30 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.0
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        run: pip install "uv==${UV_VERSION}"
+      - name: Sync dependencies
+        run: uv sync --group dev
       - name: Run tests
         run: uv run pytest -q
 
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.0
         with:
           python-version: "3.12"
+      - name: Install uv
+        run: pip install "uv==${UV_VERSION}"
       - name: Build sdist and wheel
         run: uv build
       - name: Check metadata
-        run: uvx twine check dist/*
+        run: uvx twine@6.1.0 check dist/*
       - name: Assert py.typed is shipped in the wheel
         run: |
           unzip -l dist/*.whl | grep "webshare/py.typed"
@@ -53,10 +70,14 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.0
         with:
           python-version: "3.12"
+      - name: Install uv
+        run: pip install "uv==${UV_VERSION}"
+      - name: Sync dependencies
+        run: uv sync --group dev
       - name: Run integration tests (only when the secret is available)
         env:
           WEBSHARE_API_KEY: ${{ secrets.WEBSHARE_API_KEY }}
