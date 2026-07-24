@@ -8,8 +8,11 @@ import webshare
 
 def main() -> None:
     with webshare.Webshare() as client:
-        page = client.proxies.list(mode="direct", page_size=25)
-        print(f"Total proxies: {page.count}")
+        # Plan-scoped calls take the plan id from client.plans.list().
+        plan = next(p for p in client.plans.list() if p.status == "active")
+
+        page = client.proxies.list(mode="direct", plan_id=plan.id, page_size=25)
+        print(f"Plan {plan.id}: {page.count} proxies")
 
         # Iterating the page object automatically follows the `next` URL
         # across every page.

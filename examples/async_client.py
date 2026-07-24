@@ -13,7 +13,11 @@ async def main() -> None:
         profile = await client.profile.get()
         print(f"Signed in as {profile.email}")
 
-        page = await client.proxies.list(mode="direct", page_size=25)
+        # Plan-scoped calls take the plan id from client.plans.list().
+        plans = await client.plans.list()
+        plan = next(p for p in plans.results if p.status == "active")
+
+        page = await client.proxies.list(mode="direct", plan_id=plan.id, page_size=25)
         async for proxy in page:
             print(f"{proxy.proxy_address}:{proxy.port}")
 

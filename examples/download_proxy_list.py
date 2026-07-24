@@ -10,20 +10,20 @@ import webshare
 
 def main() -> None:
     with webshare.Webshare() as client:
-        subscription = client.subscription.get()
-        assert subscription.plan is not None
-        config = client.proxy_config.get(plan_id=subscription.plan)
+        # Plan-scoped calls take the plan id from client.plans.list().
+        plan = next(p for p in client.plans.list() if p.status == "active")
+        config = client.proxy_config.get(plan_id=plan.id)
         token = config.proxy_list_download_token
         assert token is not None
 
         # A shareable download URL (also available without a client via
         # webshare.build_proxy_list_download_url).
-        url = client.proxies.download_url(token, country_codes=["US"])
+        url = client.proxies.download_url(token, country_codes=["US"], plan_id=plan.id)
         print(f"Download URL: {url}")
 
         # Or fetch the list directly; one address:port:username:password
         # record per line.
-        text = client.proxies.download(token, country_codes=["US"])
+        text = client.proxies.download(token, country_codes=["US"], plan_id=plan.id)
         for line in text.splitlines()[:5]:
             print(line)
 
