@@ -19,9 +19,9 @@ Requires Python 3.10+. The only runtime dependency is [httpx](https://www.python
 ```python
 import webshare
 
-client = webshare.Webshare()  # reads WEBSHARE_API_KEY from the environment
-for proxy in client.proxies.list(mode="direct"):
-    print(f"{proxy.proxy_address}:{proxy.port}")
+with webshare.Webshare() as client:  # reads WEBSHARE_API_KEY from the environment
+    for proxy in client.proxies.list(mode="direct"):
+        print(f"{proxy.proxy_address}:{proxy.port}")
 ```
 
 Async variant:
@@ -58,7 +58,11 @@ client = webshare.Webshare(credentials_provider=lambda: load_token())
 ```
 
 The constructor raises `webshare.WebshareError` when no credential is
-available.
+available (empty strings are treated as absent). A handful of endpoints are
+unauthenticated (for example `client.referral.get_code_info` and the download
+URLs); the SDK never sends the token to them. To call only those without any
+credential, construct the client with `unauthenticated=True` — authenticated
+operations on such a client raise a clear error.
 
 ## Pagination
 
@@ -105,10 +109,13 @@ except webshare.APIError as err:
 | `NotFoundError` | 404 |
 | `RateLimitError` | 429 |
 | `InternalServerError` | 5xx |
+| `ResponseDecodeError` | 2xx with an undecodable body |
 | `APIConnectionError` / `APITimeoutError` | transport failures |
 
 Validation failures populate `err.field_errors`, e.g.
-`{"mode": ["This field is required."]}`.
+`{"mode": ["This field is required."]}`. When the server sends a valid
+`Retry-After` header, `err.retry_after` carries the parsed seconds so callers
+can self-throttle calls the SDK does not retry (such as a 429 on POST).
 
 ## Retries
 
@@ -121,12 +128,17 @@ pass `retry_non_idempotent=True` to the client to opt in POST/PATCH.
 
 ## Timeouts
 
-The default request timeout is 60 seconds. Override it per client
+The default request timeout is 60 seconds and bounds a single HTTP attempt,
+including reading the response body; the total call time may exceed it when
+retries and `Retry-After` waits occur. Override it per client
 (`Webshare(timeout=10.0)`) or per request:
 
 ```python
 client.profile.get(timeout=5.0)
 ```
+
+If you inject your own `http_client` and do not set `timeout`, the injected
+client's timeout configuration is used.
 
 Every method also accepts per-request `headers`, `max_retries`, `subuser_id`
 (sent as `X-Subuser` for sub-user masquerading) and `federated_user_id` (sent
