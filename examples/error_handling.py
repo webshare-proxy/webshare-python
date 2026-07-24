@@ -16,10 +16,10 @@ def main() -> None:
             print(f"Rate limited, retry after {err.retry_after or 'a while'}: {err.detail}")
         except webshare.PermissionDeniedError as err:
             # Every call can hit these account-state codes.
-            if err.code == "2fa_needed":
-                print("Two-factor authentication required; submit the code first.")
-            elif err.code == "account_suspended":
+            if err.code == "account_suspended":
                 print("Account is suspended; see client.verification.get_suspension().")
+            elif err.code == "account_deleted":
+                print("Account has been deleted.")
             else:
                 print(f"Forbidden: {err.detail}")
         except webshare.BadRequestError as err:

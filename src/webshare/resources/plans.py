@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from datetime import datetime
 
 from .._http import RequestSpec
 from .._pagination import AsyncPage, SyncPage
 from .._requester import AsyncResource, SyncResource
-from ..types.commerce import CheckoutResponse, Plan, PlanCancelResponse
-from .subscription import ProxySubtype, ProxyType, Term, _checkout_body
+from ..types.commerce import Plan, PlanCancelResponse
 
 
 def _list_spec(*, page: int | None, page_size: int | None) -> RequestSpec:
@@ -34,16 +33,6 @@ def _update_spec(id: int, *, automatic_refresh_next_at: str | datetime | None) -
         method="PATCH",
         path=f"/api/v2/subscription/plan/{id}/",
         json_body={"automatic_refresh_next_at": value},
-    )
-
-
-def _upgrade_spec(
-    id: int, *, payment_method: int | str | None, body: dict[str, object]
-) -> RequestSpec:
-    json_body = dict(body)
-    json_body["payment_method"] = payment_method
-    return RequestSpec(
-        method="POST", path=f"/api/v2/subscription/plan/{id}/upgrade/", json_body=json_body
     )
 
 
@@ -106,61 +95,6 @@ class Plans(SyncResource):
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             Plan,
-        )
-
-    def upgrade(
-        self,
-        id: int,
-        *,
-        proxy_type: ProxyType | None = None,
-        proxy_subtype: ProxySubtype | None = None,
-        proxy_countries: Mapping[str, int] | None = None,
-        bandwidth_limit: float | None = None,
-        on_demand_refreshes_total: int | None = None,
-        automatic_refresh_frequency: int | None = None,
-        proxy_replacements_total: int | None = None,
-        subusers_total: int | None = None,
-        is_unlimited_ip_authorizations: bool | None = None,
-        is_high_concurrency: bool | None = None,
-        is_2x_concurrency: bool | None = None,
-        is_high_priority_network: bool | None = None,
-        high_quality_ips_only: bool | None = None,
-        required_site_checks: Sequence[str] | None = None,
-        term: Term | None = None,
-        payment_method: int | str | None = None,
-        recaptcha: str | None = None,
-        timeout: float | None = None,
-        headers: Mapping[str, str] | None = None,
-        max_retries: int | None = None,
-        subuser_id: int | str | None = None,
-        federated_user_id: int | str | None = None,
-    ) -> CheckoutResponse:
-        """Upgrade a plan (checkout-shaped response; recaptcha only when a
-        payment is required)."""
-        return self._client.request_model(
-            _upgrade_spec(
-                id,
-                payment_method=payment_method,
-                body=_checkout_body(
-                    proxy_type=proxy_type,
-                    proxy_subtype=proxy_subtype,
-                    proxy_countries=proxy_countries,
-                    bandwidth_limit=bandwidth_limit,
-                    on_demand_refreshes_total=on_demand_refreshes_total,
-                    automatic_refresh_frequency=automatic_refresh_frequency,
-                    proxy_replacements_total=proxy_replacements_total,
-                    subusers_total=subusers_total,
-                    is_unlimited_ip_authorizations=is_unlimited_ip_authorizations,
-                    is_high_concurrency=is_high_concurrency,
-                    is_2x_concurrency=is_2x_concurrency,
-                    is_high_priority_network=is_high_priority_network,
-                    high_quality_ips_only=high_quality_ips_only,
-                    required_site_checks=required_site_checks,
-                    term=term,
-                    recaptcha=recaptcha,
-                ),
-            ).with_options(timeout, headers, max_retries, subuser_id, federated_user_id),
-            CheckoutResponse,
         )
 
     def cancel(
@@ -237,61 +171,6 @@ class AsyncPlans(AsyncResource):
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             Plan,
-        )
-
-    async def upgrade(
-        self,
-        id: int,
-        *,
-        proxy_type: ProxyType | None = None,
-        proxy_subtype: ProxySubtype | None = None,
-        proxy_countries: Mapping[str, int] | None = None,
-        bandwidth_limit: float | None = None,
-        on_demand_refreshes_total: int | None = None,
-        automatic_refresh_frequency: int | None = None,
-        proxy_replacements_total: int | None = None,
-        subusers_total: int | None = None,
-        is_unlimited_ip_authorizations: bool | None = None,
-        is_high_concurrency: bool | None = None,
-        is_2x_concurrency: bool | None = None,
-        is_high_priority_network: bool | None = None,
-        high_quality_ips_only: bool | None = None,
-        required_site_checks: Sequence[str] | None = None,
-        term: Term | None = None,
-        payment_method: int | str | None = None,
-        recaptcha: str | None = None,
-        timeout: float | None = None,
-        headers: Mapping[str, str] | None = None,
-        max_retries: int | None = None,
-        subuser_id: int | str | None = None,
-        federated_user_id: int | str | None = None,
-    ) -> CheckoutResponse:
-        """Upgrade a plan (checkout-shaped response; recaptcha only when a
-        payment is required)."""
-        return await self._client.request_model(
-            _upgrade_spec(
-                id,
-                payment_method=payment_method,
-                body=_checkout_body(
-                    proxy_type=proxy_type,
-                    proxy_subtype=proxy_subtype,
-                    proxy_countries=proxy_countries,
-                    bandwidth_limit=bandwidth_limit,
-                    on_demand_refreshes_total=on_demand_refreshes_total,
-                    automatic_refresh_frequency=automatic_refresh_frequency,
-                    proxy_replacements_total=proxy_replacements_total,
-                    subusers_total=subusers_total,
-                    is_unlimited_ip_authorizations=is_unlimited_ip_authorizations,
-                    is_high_concurrency=is_high_concurrency,
-                    is_2x_concurrency=is_2x_concurrency,
-                    is_high_priority_network=is_high_priority_network,
-                    high_quality_ips_only=high_quality_ips_only,
-                    required_site_checks=required_site_checks,
-                    term=term,
-                    recaptcha=recaptcha,
-                ),
-            ).with_options(timeout, headers, max_retries, subuser_id, federated_user_id),
-            CheckoutResponse,
         )
 
     async def cancel(

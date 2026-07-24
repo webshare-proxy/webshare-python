@@ -154,19 +154,6 @@ def test_unauthenticated_client(server: MockServer, monkeypatch: pytest.MonkeyPa
     assert len(server.requests) == 1
 
 
-def test_auth_optional_operation(server: MockServer) -> None:
-    # complete_activation is auth-optional: the token is sent when available
-    # and omitted on an unauthenticated client.
-    server.enqueue(json_body={"token": "new"})
-    make_client(server).auth.complete_activation(activation_token="t")
-    assert server.requests[0].headers["Authorization"] == "Token test-key"
-    server.enqueue(json_body={"token": "new"})
-    Webshare(base_url=server.base_url, unauthenticated=True).auth.complete_activation(
-        activation_token="t"
-    )
-    assert "Authorization" not in server.requests[1].headers
-
-
 def test_source_header_default_format(server: MockServer) -> None:
     import re
 

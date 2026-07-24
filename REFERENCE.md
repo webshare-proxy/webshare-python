@@ -126,19 +126,6 @@ raise `APIConnectionError` / `APITimeoutError`.
 | `client.subusers.delete(id, plan_id=...)` | Delete a sub-user. | [docs](https://apidocs.webshare.io/subuser/delete) |
 | `client.subusers.refresh_proxy_list(id)` | Refresh a sub-user's custom proxy list. | [docs](https://apidocs.webshare.io/subuser/refresh_proxy_list) |
 
-## client.api_keys
-
-Session-token-only: these endpoints return 403 `api_key_not_allowed` under
-API-key auth.
-
-| Method | Description | Docs |
-| --- | --- | --- |
-| `client.api_keys.list()` | List API keys (paginated). | [docs](https://apidocs.webshare.io/apikeys/list) |
-| `client.api_keys.create(label=...)` | Create an API key (the only response carrying the full `key`). | [docs](https://apidocs.webshare.io/apikeys/create) |
-| `client.api_keys.get(id)` | Get an API key. | [docs](https://apidocs.webshare.io/apikeys/retrieve) |
-| `client.api_keys.update(id, label=...)` | Update an API key. | [docs](https://apidocs.webshare.io/apikeys/update) |
-| `client.api_keys.delete(id)` | Delete an API key. | [docs](https://apidocs.webshare.io/apikeys/delete) |
-
 ## client.profile
 
 | Method | Description | Docs |
@@ -157,46 +144,11 @@ API-key auth.
 | `client.notifications.dismiss(id)` | Dismiss a notification. | [docs](https://apidocs.webshare.io/notifications/dismiss) |
 | `client.notifications.restore(id)` | Restore a dismissed notification. | [docs](https://apidocs.webshare.io/notifications/restore) |
 
-## client.auth
-
-`register`, `login` and `delete_account` are dashboard-only per the docs
-(recaptcha).
-
-| Method | Description | Docs |
-| --- | --- | --- |
-| `client.auth.register(email=..., password=..., recaptcha=..., tos_accepted=...)` | Register a local account. | [docs](https://apidocs.webshare.io/registerandlogin/local-account) |
-| `client.auth.register_social(provider=..., code=..., redirect_uri=..., tos_accepted=...)` | Register with a social provider (Google OAuth2). | [docs](https://apidocs.webshare.io/registerandlogin/social-account) |
-| `client.auth.login(email=..., password=..., recaptcha=...)` | Sign in with a local account. | [docs](https://apidocs.webshare.io/registerandlogin/local-account) |
-| `client.auth.login_social(provider=..., code=..., redirect_uri=...)` | Login with a social provider. | [docs](https://apidocs.webshare.io/registerandlogin/social-account) |
-| `client.auth.logout()` | Invalidate the token used for the call. | [docs](https://apidocs.webshare.io/registerandlogin/logout) |
-| `client.auth.change_password(password=..., new_password=...)` | Change the password (disables all other tokens). | [docs](https://apidocs.webshare.io/registerandlogin/change-password) |
-| `client.auth.request_password_reset(email=..., recaptcha=...)` | Request a password reset email (always 204). | [docs](https://apidocs.webshare.io/registerandlogin/reset-password) |
-| `client.auth.complete_password_reset(password=..., password_reset_token=..., recaptcha=...)` | Complete a password reset; returns a new token. | [docs](https://apidocs.webshare.io/registerandlogin/reset-password) |
-| `client.auth.request_email_change(password=..., new_email=...)` | Request an email change. | [docs](https://apidocs.webshare.io/registerandlogin/change-email) |
-| `client.auth.complete_email_change(confirmation_code=...)` | Complete an email change (authenticated). | [docs](https://apidocs.webshare.io/registerandlogin/change-email) |
-| `client.auth.get_activation()` | Get the account activation status. | [docs](https://apidocs.webshare.io/registerandlogin/activate-account) |
-| `client.auth.resend_activation()` | Re-send the activation email. | [docs](https://apidocs.webshare.io/registerandlogin/activate-account) |
-| `client.auth.complete_activation(activation_token=...)` | Complete activation; returns a new token. | [docs](https://apidocs.webshare.io/registerandlogin/activate-account) |
-| `client.auth.delete_account(password=..., recaptcha=...)` | Delete the account. | [docs](https://apidocs.webshare.io/registerandlogin/delete-account) |
-| `client.auth.delete_account_social(provider=..., code=..., redirect_uri=...)` | Delete a social-provider account. | [docs](https://apidocs.webshare.io/registerandlogin/delete-social-account) |
-
-## client.two_factor_auth
-
-| Method | Description | Docs |
-| --- | --- | --- |
-| `client.two_factor_auth.get_method()` | Get the active 2FA method (session-token-only). | [docs](https://apidocs.webshare.io/twofactorauth/get-2fa-method) |
-| `client.two_factor_auth.change_method(type=...)` | Change the 2FA method (`device_totp` returns a one-time `secret_key`). | [docs](https://apidocs.webshare.io/twofactorauth/change-2fa-method) |
-| `client.two_factor_auth.activate_method(id, code_1=..., code_2=...)` | Activate a TOTP device method with two consecutive codes. | [docs](https://apidocs.webshare.io/twofactorauth/activate-2fa-method) |
-| `client.two_factor_auth.submit_code(code=..., recaptcha=...)` | Submit the 2FA code after a 403 `2fa_needed`. | [docs](https://apidocs.webshare.io/twofactorauth/enter-2fa-code) |
-| `client.two_factor_auth.resend_email_code()` | Resend the 2FA code via email. | [docs](https://apidocs.webshare.io/twofactorauth/resend-2fa-email) |
-
 ## client.id_verification
 
 | Method | Description | Docs |
 | --- | --- | --- |
 | `client.id_verification.get()` | Get the ID verification object (Stripe Identity). | [docs](https://apidocs.webshare.io/idverification/retrieve) |
-| `client.id_verification.start()` | Start an ID verification; returns the Stripe `client_secret`. | [docs](https://apidocs.webshare.io/idverification/start) |
-| `client.id_verification.complete()` | Complete an ID verification after the Stripe JS flow. | [docs](https://apidocs.webshare.io/idverification/complete) |
 
 ## client.verification
 
@@ -228,7 +180,6 @@ API-key auth.
 | Method | Description | Docs |
 | --- | --- | --- |
 | `client.payment_methods.list()` | List payment methods (paginated; polymorphic on `type`). | [docs](https://apidocs.webshare.io/billing/payment_methods) |
-| `client.payment_methods.create(recaptcha=...)` | Start the update-payment-method flow (Stripe SetupIntent). | [docs](https://apidocs.webshare.io/billing/update_payment_method) |
 | `client.payment_methods.get(id)` | Get a payment method. | [docs](https://apidocs.webshare.io/billing/payment_methods) |
 
 ## client.pending_payments
@@ -253,8 +204,6 @@ API-key auth.
 | `client.subscription.get_available_assets()` | Get available assets per proxy category/subtype. | [docs](https://apidocs.webshare.io/subscription/assets) |
 | `client.subscription.customize(proxy_type=..., proxy_countries=..., plan_id=...)` | Get customization limits/options for a plan configuration. | [docs](https://apidocs.webshare.io/subscription/customize) |
 | `client.subscription.pricing(proxy_type=..., proxy_countries=..., term=..., ...)` | Get the pricing for a custom plan configuration. | [docs](https://apidocs.webshare.io/subscription/pricing) |
-| `client.subscription.purchase(proxy_type=..., term=..., payment_method=..., ...)` | Purchase a plan (recaptcha only when a payment is required). | [docs](https://apidocs.webshare.io/subscription/purchase_plan) |
-| `client.subscription.renew(term=..., payment_method=..., recaptcha=...)` | Renew the subscription. | [docs](https://apidocs.webshare.io/subscription/renew) |
 | `client.subscription.enable_auto_renewal()` | Enable auto-renewal (payment method must be on file). | [docs](https://apidocs.webshare.io/subscription/auto_renewal) |
 | `client.subscription.cancel_auto_renewal()` | Cancel auto-renewal (also removes the payment method). | [docs](https://apidocs.webshare.io/subscription/auto_renewal) |
 
@@ -265,7 +214,6 @@ API-key auth.
 | `client.plans.list()` | List all plans, including non-active ones (paginated). | [docs](https://apidocs.webshare.io/subscription/plan) |
 | `client.plans.get(id)` | Get a plan. | [docs](https://apidocs.webshare.io/subscription/plan) |
 | `client.plans.update(id, automatic_refresh_next_at=...)` | Update a plan (only `automatic_refresh_next_at` is editable). | [docs](https://apidocs.webshare.io/subscription/plan) |
-| `client.plans.upgrade(id, proxy_type=..., term=..., payment_method=..., ...)` | Upgrade a plan (checkout-shaped response). | [docs](https://apidocs.webshare.io/subscription/plan) |
 | `client.plans.cancel(id)` | Cancel a plan (subscription credited for the remainder). | [docs](https://apidocs.webshare.io/subscription/plan) |
 
 ## client.invoices

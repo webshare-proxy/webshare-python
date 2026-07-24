@@ -26,8 +26,6 @@ from ._http import (
 from ._models import decode
 from ._pagination import AsyncPage
 from .resources import (
-    AsyncAPIKeys,
-    AsyncAuth,
     AsyncBilling,
     AsyncDownloadTokens,
     AsyncIDVerificationResource,
@@ -48,7 +46,6 @@ from .resources import (
     AsyncSubscriptionResource,
     AsyncSubusers,
     AsyncTransactions,
-    AsyncTwoFactorAuth,
     AsyncVerification,
 )
 
@@ -117,11 +114,8 @@ class AsyncWebshare(BaseClient):
         self.download_tokens = AsyncDownloadTokens(self)
         self.ip_authorizations = AsyncIPAuthorizations(self)
         self.subusers = AsyncSubusers(self)
-        self.api_keys = AsyncAPIKeys(self)
         self.profile = AsyncProfileResource(self)
         self.notifications = AsyncNotifications(self)
-        self.auth = AsyncAuth(self)
-        self.two_factor_auth = AsyncTwoFactorAuth(self)
         self.id_verification = AsyncIDVerificationResource(self)
         self.verification = AsyncVerification(self)
         self.billing = AsyncBilling(self)
@@ -162,8 +156,6 @@ class AsyncWebshare(BaseClient):
         if spec.auth == "none":
             return None
         if self._credentials_provider is None:
-            if spec.auth == "optional":
-                return None
             raise auth_required_error()
         result = self._credentials_provider()
         if isinstance(result, str):

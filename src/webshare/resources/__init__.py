@@ -1,7 +1,5 @@
 """Resource groups mounted on the Webshare clients."""
 
-from .api_keys import APIKeys, AsyncAPIKeys
-from .auth import AsyncAuth, Auth
 from .billing import AsyncBilling, Billing
 from .download_tokens import AsyncDownloadTokens, DownloadTokens
 from .id_verification import AsyncIDVerificationResource, IDVerificationResource
@@ -22,13 +20,9 @@ from .stats import AsyncStats, Stats
 from .subscription import AsyncSubscriptionResource, SubscriptionResource
 from .subusers import AsyncSubusers, Subusers
 from .transactions import AsyncTransactions, Transactions
-from .two_factor_auth import AsyncTwoFactorAuth, TwoFactorAuth
 from .verification import AsyncVerification, Verification
 
 __all__ = [
-    "APIKeys",
-    "AsyncAPIKeys",
-    "AsyncAuth",
     "AsyncBilling",
     "AsyncDownloadTokens",
     "AsyncIDVerificationResource",
@@ -49,9 +43,7 @@ __all__ = [
     "AsyncSubscriptionResource",
     "AsyncSubusers",
     "AsyncTransactions",
-    "AsyncTwoFactorAuth",
     "AsyncVerification",
-    "Auth",
     "Billing",
     "DownloadTokens",
     "IDVerificationResource",
@@ -72,6 +64,5 @@ __all__ = [
     "SubscriptionResource",
     "Subusers",
     "Transactions",
-    "TwoFactorAuth",
     "Verification",
 ]

@@ -7,18 +7,12 @@ from datetime import datetime
 from typing import Any
 
 __all__ = [
-    "APIKey",
     "AbuseReport",
-    "ActivationStatus",
     "IDVerification",
-    "LoginResponse",
     "Notification",
     "Profile",
     "ProfilePreferences",
-    "RegisterResponse",
     "Suspension",
-    "TwoFactorAuthMethod",
-    "TwoFactorEmailResend",
     "VerificationAnswer",
     "VerificationAppeal",
     "VerificationCategory",
@@ -29,15 +23,6 @@ __all__ = [
     "VerificationQuestion",
     "VerificationThreshold",
 ]
-
-
-@dataclass
-class APIKey:
-    id: int
-    key: str | None
-    label: str | None
-    created_at: datetime | None
-    updated_at: datetime | None
 
 
 @dataclass
@@ -86,46 +71,6 @@ class Notification:
     created_at: datetime | None
     updated_at: datetime | None
     dismissed_at: datetime | None
-
-
-@dataclass
-class RegisterResponse:
-    token: str | None
-    logged_in_existing_user: bool | None
-
-
-@dataclass
-class LoginResponse:
-    token: str | None
-
-
-@dataclass
-class ActivationStatus:
-    email_is_verified: bool | None
-    last_time_email_verification_email_sent: datetime | None
-    created_at: datetime | None
-    updated_at: datetime | None
-
-
-@dataclass
-class TwoFactorAuthMethod:
-    """A 2FA method.
-
-    ``secret_key`` (hex TOTP secret) is only present in the response that
-    creates a ``device_totp`` method; surface it to the user immediately.
-    """
-
-    id: int
-    type: str | None
-    active: bool | None
-    secret_key: str | None
-    created_at: datetime | None
-    updated_at: datetime | None
-
-
-@dataclass
-class TwoFactorEmailResend:
-    email_sent: bool | None
 
 
 @dataclass

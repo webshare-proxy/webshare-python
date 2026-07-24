@@ -7,18 +7,12 @@ from collections.abc import Mapping
 from .._http import RequestSpec
 from .._pagination import AsyncPage, SyncPage
 from .._requester import AsyncResource, SyncResource
-from ..types.commerce import PaymentMethod, PaymentMethodSetup
+from ..types.commerce import PaymentMethod
 
 
 def _list_spec(*, page: int | None, page_size: int | None) -> RequestSpec:
     return RequestSpec(
         method="GET", path="/api/v2/payment/method/", query={"page": page, "page_size": page_size}
-    )
-
-
-def _create_spec(*, recaptcha: str) -> RequestSpec:
-    return RequestSpec(
-        method="POST", path="/api/v2/payment/method/", json_body={"recaptcha": recaptcha}
     )
 
 
@@ -44,25 +38,6 @@ class PaymentMethods(SyncResource):
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             PaymentMethod,
-        )
-
-    def create(
-        self,
-        *,
-        recaptcha: str,
-        timeout: float | None = None,
-        headers: Mapping[str, str] | None = None,
-        max_retries: int | None = None,
-        subuser_id: int | str | None = None,
-        federated_user_id: int | str | None = None,
-    ) -> PaymentMethodSetup:
-        """Start the update-payment-method flow (Stripe SetupIntent; requires
-        recaptcha). Confirm the returned ``stripe_client_secret`` via Stripe.js."""
-        return self._client.request_model(
-            _create_spec(recaptcha=recaptcha).with_options(
-                timeout, headers, max_retries, subuser_id, federated_user_id
-            ),
-            PaymentMethodSetup,
         )
 
     def get(
@@ -102,25 +77,6 @@ class AsyncPaymentMethods(AsyncResource):
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             PaymentMethod,
-        )
-
-    async def create(
-        self,
-        *,
-        recaptcha: str,
-        timeout: float | None = None,
-        headers: Mapping[str, str] | None = None,
-        max_retries: int | None = None,
-        subuser_id: int | str | None = None,
-        federated_user_id: int | str | None = None,
-    ) -> PaymentMethodSetup:
-        """Start the update-payment-method flow (Stripe SetupIntent; requires
-        recaptcha)."""
-        return await self._client.request_model(
-            _create_spec(recaptcha=recaptcha).with_options(
-                timeout, headers, max_retries, subuser_id, federated_user_id
-            ),
-            PaymentMethodSetup,
         )
 
     async def get(

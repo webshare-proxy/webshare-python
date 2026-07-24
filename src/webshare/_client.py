@@ -26,8 +26,6 @@ from ._http import (
 from ._models import decode
 from ._pagination import SyncPage
 from .resources import (
-    APIKeys,
-    Auth,
     Billing,
     DownloadTokens,
     IDVerificationResource,
@@ -48,7 +46,6 @@ from .resources import (
     SubscriptionResource,
     Subusers,
     Transactions,
-    TwoFactorAuth,
     Verification,
 )
 
@@ -143,11 +140,8 @@ class Webshare(BaseClient):
         self.download_tokens = DownloadTokens(self)
         self.ip_authorizations = IPAuthorizations(self)
         self.subusers = Subusers(self)
-        self.api_keys = APIKeys(self)
         self.profile = ProfileResource(self)
         self.notifications = Notifications(self)
-        self.auth = Auth(self)
-        self.two_factor_auth = TwoFactorAuth(self)
         self.id_verification = IDVerificationResource(self)
         self.verification = Verification(self)
         self.billing = Billing(self)
@@ -188,8 +182,6 @@ class Webshare(BaseClient):
         if spec.auth == "none":
             return None
         if self._credentials_provider is None:
-            if spec.auth == "optional":
-                return None
             raise auth_required_error()
         return self._credentials_provider()
 

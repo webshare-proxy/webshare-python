@@ -49,7 +49,7 @@ MAX_DETAIL_CHARS = 2048
 QueryValue = str | int | float | bool | datetime | Sequence[str] | None
 FileInput = str | os.PathLike[str] | bytes | IO[bytes] | tuple[str, "bytes | IO[bytes]"]
 
-AuthMode = Literal["required", "optional", "none"]
+AuthMode = Literal["required", "none"]
 
 
 @dataclass(frozen=True)

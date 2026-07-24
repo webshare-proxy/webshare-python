@@ -130,8 +130,8 @@ try:
 except webshare.RateLimitError as err:
     print(err.status_code, err.detail)
 except webshare.PermissionDeniedError as err:
-    if err.code == "2fa_needed":
-        ...  # submit the 2FA code, then retry
+    if err.code == "account_suspended":
+        ...  # see client.verification.get_suspension()
 except webshare.APIError as err:
     print(err.status_code, err.code, err.field_errors, err.request_id)
 ```
@@ -140,7 +140,7 @@ except webshare.APIError as err:
 | --- | --- |
 | `BadRequestError` | 400 |
 | `AuthenticationError` | 401 |
-| `PermissionDeniedError` | 403 (check `code`: `2fa_needed`, `account_suspended`, `account_deleted`, `api_key_not_allowed`) |
+| `PermissionDeniedError` | 403 (check `code`: `account_suspended`, `account_deleted`) |
 | `NotFoundError` | 404 |
 | `RateLimitError` | 429 |
 | `InternalServerError` | 5xx |
@@ -149,11 +149,12 @@ except webshare.APIError as err:
 
 Validation failures populate `err.field_errors`, e.g.
 `{"mode": ["This field is required."]}` (both the documented string-list and
-the live API's message-object forms are parsed). A few endpoints (`/apikey/*`,
-the current-2FA-method getter) only accept session tokens and return 403 with
-code `api_key_not_allowed` under API-key auth. When the server sends a valid
+the live API's message-object forms are parsed). When the server sends a valid
 `Retry-After` header, `err.retry_after` carries the parsed seconds so callers
-can self-throttle calls the SDK does not retry (such as a 429 on POST).
+can self-throttle calls the SDK does not retry (such as a 429 on POST). If you
+authenticate with a login token via `credentials_provider` (rather than an API
+key), calls can additionally return 403 with code `2fa_needed`; API keys are
+never 2FA-challenged.
 
 ## Retries
 

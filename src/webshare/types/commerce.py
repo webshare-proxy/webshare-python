@@ -14,14 +14,12 @@ __all__ = [
     "BillingInfo",
     "BundleAddon",
     "BundleInfo",
-    "CheckoutResponse",
     "CouponCode",
     "CouponDiscount",
     "CustomizationOptions",
     "CustomizationTerm",
     "FeaturePrice",
     "PaymentMethod",
-    "PaymentMethodSetup",
     "PendingPayment",
     "Plan",
     "PlanCancelResponse",
@@ -71,16 +69,6 @@ class PaymentMethod:
     state: str | None
     postal_code: str | None
     country: str | None
-
-
-@dataclass
-class PaymentMethodSetup:
-    """Response of the update-payment-method (Stripe SetupIntent) flow."""
-
-    pending_payment: int | None
-    stripe_client_secret: str | None
-    stripe_setup_intent: str | None
-    stripe_payment_intent: str | None
 
 
 @dataclass
@@ -323,22 +311,6 @@ class Pricing:
     features: list[FeaturePrice] | None
     tax_breakdown: list[TaxBreakdownEntry] | None
     coupon_discount: CouponDiscount | None
-
-
-@dataclass
-class CheckoutResponse:
-    """Shared response shape of purchase/upgrade/renew checkouts.
-
-    If ``payment_required`` is false the change is complete; otherwise confirm
-    the Stripe PaymentIntent (Stripe.js) and poll the pending payment.
-    """
-
-    payment_required: bool | None
-    plan: int | None
-    pending_payment: int | None
-    stripe_client_secret: str | None
-    stripe_payment_intent: str | None
-    stripe_payment_method: str | None
 
 
 @dataclass
