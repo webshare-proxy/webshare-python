@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 __all__ = [
     "AssetInfo",
@@ -126,6 +127,8 @@ class Transaction:
     credits_gained: float | None
     refund_amount: float | None
     refund_date: datetime | None
+    # Observed on the live API but undocumented (only null seen so far).
+    line_items: list[Any] | None
     created_at: datetime | None
     updated_at: datetime | None
 
@@ -153,6 +156,8 @@ class Subscription:
     promo_type: str | None
     promo_value: int | None
     throttled: bool | None
+    # Observed on the live API but undocumented.
+    will_renew: bool | None
     created_at: datetime | None
     updated_at: datetime | None
 
@@ -358,6 +363,12 @@ class ReferralConfig:
     referral_payment_pending_days: str | None
     promo_type: str | None
     promo_value: int | None
+    # Observed on the live API but undocumented (affiliate commission terms;
+    # numeric here, unlike the string-serialized ReferralChannel rates).
+    initial_rate: float | None
+    ongoing_rate: float | None
+    initial_rate_period_days: int | None
+    max_earnings_per_referred: float | None
     created_at: datetime | None
     updated_at: datetime | None
 

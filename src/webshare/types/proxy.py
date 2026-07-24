@@ -38,6 +38,10 @@ class Proxy:
     last_verification: datetime | None
     country_code: str | None
     city_name: str | None
+    # Observed on the live API but undocumented.
+    asn_name: str | None
+    asn_number: int | None
+    high_country_confidence: bool | None
     created_at: datetime | None
 
 
@@ -49,6 +53,10 @@ class ProxyListConfig:
     request_idle_timeout: int | None
     ip_authorization_country_codes: list[str] | None
     ip_authorization_city: str | None
+    # ip_authorization_state / ip_authorization_postalcode are referenced in
+    # the docs' mutual-exclusion prose and observed on the live API.
+    ip_authorization_state: str | None
+    ip_authorization_postalcode: str | None
     ip_authorization_asn: str | None
     auto_replace_invalid_proxies: bool | None
     auto_replace_low_country_confidence_proxies: bool | None
@@ -83,6 +91,10 @@ class ProxyConfig:
     request_idle_timeout: int | None
     ip_authorization_country_codes: list[str] | None
     ip_authorization_city: str | None
+    # ip_authorization_state / ip_authorization_postalcode are referenced in
+    # the docs' mutual-exclusion prose and observed on the live API.
+    ip_authorization_state: str | None
+    ip_authorization_postalcode: str | None
     ip_authorization_asn: str | None
     auto_replace_invalid_proxies: bool | None
     auto_replace_low_country_confidence_proxies: bool | None

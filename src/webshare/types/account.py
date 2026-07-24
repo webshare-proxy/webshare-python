@@ -55,6 +55,11 @@ class Profile:
     subscribed_guides_and_tips: bool | None
     subscribed_survey_emails: bool | None
     tracking_id: str | None
+    # Observed on the live API but undocumented.
+    announce_kit_user_token: str | None
+    helpscout_beacon_signature: str | None
+    intercom_signature: str | None
+    is_vip_customer: bool | None
     created_at: datetime | None
     updated_at: datetime | None
 
@@ -65,6 +70,9 @@ class ProfilePreferences:
     customer_satisfaction_survey_last_dismissed_at: datetime | None
     customer_satisfaction_survey_last_completed_at: datetime | None
     onboarding_activity_page_viewed_at: datetime | None
+    # Observed on the live API but undocumented.
+    created_at: datetime | None
+    updated_at: datetime | None
 
 
 @dataclass
