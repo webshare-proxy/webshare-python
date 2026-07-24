@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 import webshare
@@ -75,15 +77,68 @@ async def test_async_retry_on_429(server: MockServer, no_sleep: list[float]) -> 
     assert len(server.requests) == 2
 
 
+def test_multipart_retry_replays_file_bytes(
+    server: MockServer, no_sleep: list[float], tmp_path: Path
+) -> None:
+    evidence = tmp_path / "evidence.bin"
+    evidence.write_bytes(b"replayable-bytes")
+    server.enqueue(status=503, text="oops")
+    server.enqueue(json_body={"id": 1, "type": "abuse_report", "state": "inflow"})
+    client = Webshare(base_url=server.base_url, api_key="k", retry_non_idempotent=True)
+    with evidence.open("rb") as handle:
+        flow = client.verification.flows.submit_evidence(1, explanation="x", files=[handle])
+    assert flow.id == 1
+    assert len(server.requests) == 2
+    # The file object was buffered at request-build time, so the retried
+    # attempt carries the full bytes even though the stream is at EOF.
+    assert b"replayable-bytes" in server.requests[0].body
+    assert b"replayable-bytes" in server.requests[1].body
+
+
+def test_retry_after_exposed_on_non_retried_error(
+    server: MockServer, no_sleep: list[float]
+) -> None:
+    # POST is not retried by default; the parsed Retry-After is surfaced so
+    # the caller can self-throttle.
+    server.enqueue(status=429, json_body={"detail": "throttled"}, headers={"Retry-After": "7"})
+    client = Webshare(base_url=server.base_url, api_key="k")
+    with pytest.raises(webshare.RateLimitError) as excinfo:
+        client.proxies.refresh()
+    assert excinfo.value.retry_after == 7.0
+    assert len(server.requests) == 1
+
+
 def test_parse_retry_after() -> None:
     assert parse_retry_after("5") == 5.0
     assert parse_retry_after("0") == 0.0
+    assert parse_retry_after(" 5 ") == 5.0
     assert parse_retry_after(None) is None
     assert parse_retry_after("not-a-value") is None
     # Values are capped at 60 seconds.
     assert parse_retry_after("3600") == 60.0
-    # HTTP-date form parses to a non-negative delay (date in the past -> 0).
-    assert parse_retry_after("Wed, 21 Oct 2015 07:28:00 GMT") == 0.0
+    # Invalid values are treated as an absent header.
+    assert parse_retry_after("") is None
+    assert parse_retry_after("   ") is None
+    assert parse_retry_after("nan") is None
+    assert parse_retry_after("inf") is None
+    assert parse_retry_after("-5") is None
+    # HTTP-dates in the past yield a negative delay -> treated as absent.
+    assert parse_retry_after("Wed, 21 Oct 2015 07:28:00 GMT") is None
+
+
+def test_parse_retry_after_http_dates() -> None:
+    from datetime import datetime, timedelta, timezone
+    from email.utils import format_datetime
+
+    future = datetime.now(timezone.utc) + timedelta(seconds=30)
+    delay = parse_retry_after(format_datetime(future, usegmt=True))
+    assert delay is not None
+    assert 0 < delay <= 31
+    # Naive HTTP-dates ("-0000" zone) are interpreted as UTC.
+    naive = format_datetime(future.replace(tzinfo=None))
+    delay = parse_retry_after(naive)
+    assert delay is not None
+    assert 0 < delay <= 31
 
 
 def test_compute_backoff_bounds() -> None:

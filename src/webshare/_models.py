@@ -17,12 +17,41 @@ stripped when looking up the wire key (used for reserved words such as
 from __future__ import annotations
 
 import dataclasses
+import re
 from datetime import datetime
 from functools import cache
 from types import UnionType
 from typing import Any, TypeVar, Union, cast, get_args, get_origin, get_type_hints
 
 ModelT = TypeVar("ModelT")
+
+_ISO_RE = re.compile(
+    r"^(?P<head>\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})"
+    r"(?:\.(?P<frac>\d+))?"
+    r"(?P<tz>[+-]\d{2}:?\d{2}|[+-]\d{2})?$"
+)
+
+
+def _normalize_iso(text: str) -> str:
+    """Normalize an RFC 3339 timestamp for Python 3.10's stricter
+    ``fromisoformat`` (pad/truncate fractional seconds to 6 digits, insert
+    the colon in numeric offsets)."""
+    match = _ISO_RE.match(text)
+    if match is None:
+        return text
+    head = match.group("head")
+    frac = match.group("frac")
+    tz = match.group("tz")
+    out = head
+    if frac is not None:
+        out += "." + frac[:6].ljust(6, "0")
+    if tz is not None:
+        if len(tz) == 3:  # +HH
+            tz += ":00"
+        elif ":" not in tz:  # +HHMM
+            tz = tz[:3] + ":" + tz[3:]
+        out += tz
+    return out
 
 
 def parse_datetime(value: str) -> datetime:
@@ -31,7 +60,12 @@ def parse_datetime(value: str) -> datetime:
     # Python 3.10's fromisoformat does not accept a trailing "Z".
     if text.endswith(("Z", "z")):
         text = text[:-1] + "+00:00"
-    return datetime.fromisoformat(text)
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        # Python 3.10 only accepts isoformat() output (3/6-digit fractions,
+        # colon offsets); normalize other valid RFC 3339 spellings.
+        return datetime.fromisoformat(_normalize_iso(text))
 
 
 @cache
