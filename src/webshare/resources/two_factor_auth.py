@@ -3,6 +3,10 @@
 2FA only applies to login tokens; API keys are never challenged. When 2FA is
 required, any API call returns 403 with code ``2fa_needed``; submit the code
 via ``submit_code`` and replay the original request.
+
+Note: the live API restricts ``get_method`` (``/twofactorauth/method/current/``)
+to session (login) tokens. Calling it with an API key returns 403 with code
+``api_key_not_allowed``.
 """
 
 from __future__ import annotations

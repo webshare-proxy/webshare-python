@@ -1,4 +1,9 @@
-"""The API key resource (`client.api_keys`)."""
+"""The API key resource (`client.api_keys`).
+
+Note: the live API restricts the ``/apikey/`` endpoints to session (login)
+tokens. Calling them with an API key returns 403 with code
+``api_key_not_allowed`` ("Cannot query this API endpoint with an API key.").
+"""
 
 from __future__ import annotations
 

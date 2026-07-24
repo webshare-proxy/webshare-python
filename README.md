@@ -105,7 +105,7 @@ except webshare.APIError as err:
 | --- | --- |
 | `BadRequestError` | 400 |
 | `AuthenticationError` | 401 |
-| `PermissionDeniedError` | 403 (check `code`: `2fa_needed`, `account_suspended`, `account_deleted`) |
+| `PermissionDeniedError` | 403 (check `code`: `2fa_needed`, `account_suspended`, `account_deleted`, `api_key_not_allowed`) |
 | `NotFoundError` | 404 |
 | `RateLimitError` | 429 |
 | `InternalServerError` | 5xx |
@@ -113,7 +113,10 @@ except webshare.APIError as err:
 | `APIConnectionError` / `APITimeoutError` | transport failures |
 
 Validation failures populate `err.field_errors`, e.g.
-`{"mode": ["This field is required."]}`. When the server sends a valid
+`{"mode": ["This field is required."]}` (both the documented string-list and
+the live API's message-object forms are parsed). A few endpoints (`/apikey/*`,
+the current-2FA-method getter) only accept session tokens and return 403 with
+code `api_key_not_allowed` under API-key auth. When the server sends a valid
 `Retry-After` header, `err.retry_after` carries the parsed seconds so callers
 can self-throttle calls the SDK does not retry (such as a 429 on POST).
 
