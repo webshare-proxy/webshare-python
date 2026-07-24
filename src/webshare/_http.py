@@ -200,6 +200,7 @@ def build_headers(
     *,
     token: str | None,
     user_agent: str,
+    source: str,
     default_headers: Mapping[str, str] | None,
     client_subuser_id: int | str | None,
     client_federated_user_id: int | str | None,
@@ -217,6 +218,7 @@ def build_headers(
     headers: dict[str, str] = {
         "Accept": "application/json",
         "User-Agent": user_agent,
+        "X-Webshare-Source": source,
     }
     if has_json_body:
         headers["Content-Type"] = "application/json"

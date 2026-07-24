@@ -167,6 +167,26 @@ def test_auth_optional_operation(server: MockServer) -> None:
     assert "Authorization" not in server.requests[1].headers
 
 
+def test_source_header_default_format(server: MockServer) -> None:
+    import re
+
+    server.enqueue(json_body=PROFILE)
+    make_client(server).profile.get()
+    source = server.requests[0].headers["X-Webshare-Source"]
+    assert re.fullmatch(r"WebshareSDK/\d+\.\d+\.\d+ \(Python; \d+\.\d+\.\d+[^)]*\)", source), source
+
+
+def test_source_header_override(server: MockServer) -> None:
+    server.enqueue(json_body=PROFILE)
+    server.enqueue(json_body=PROFILE)
+    client = make_client(server, source="WebshareCLI/1.2.3")
+    client.profile.get()
+    assert server.requests[0].headers["X-Webshare-Source"] == "WebshareCLI/1.2.3"
+    # Per-request headers still win over everything.
+    client.profile.get(headers={"X-Webshare-Source": "custom/0"})
+    assert server.requests[1].headers["X-Webshare-Source"] == "custom/0"
+
+
 def test_default_headers_merge_case_insensitively(server: MockServer) -> None:
     server.enqueue(json_body=PROFILE)
     client = make_client(server, default_headers={"accept": "text/plain"})

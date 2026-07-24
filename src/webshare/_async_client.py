@@ -82,6 +82,7 @@ class AsyncWebshare(BaseClient):
         federated_user_id: int | str | None = None,
         retry_non_idempotent: bool = False,
         unauthenticated: bool = False,
+        source: str | None = None,
     ) -> None:
         super().__init__(
             base_url=base_url,
@@ -91,6 +92,7 @@ class AsyncWebshare(BaseClient):
             subuser_id=subuser_id,
             federated_user_id=federated_user_id,
             retry_non_idempotent=retry_non_idempotent,
+            source=source,
         )
         self._credentials_provider: AsyncCredentialsProvider | None
         if unauthenticated:

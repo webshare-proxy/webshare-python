@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 from collections.abc import Mapping
 from typing import Any, TypeVar
 from urllib.parse import urljoin
@@ -81,6 +82,7 @@ class BaseClient:
         subuser_id: int | str | None,
         federated_user_id: int | str | None,
         retry_non_idempotent: bool,
+        source: str | None,
     ) -> None:
         self.base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
         self.timeout = DEFAULT_TIMEOUT if timeout is None else timeout
@@ -90,6 +92,9 @@ class BaseClient:
         self.federated_user_id = federated_user_id
         self.retry_non_idempotent = retry_non_idempotent
         self.user_agent = f"webshare-python/{__version__}"
+        # X-Webshare-Source identifies the caller for API-side tracking; the
+        # `source` option replaces the whole value.
+        self.source = source or (f"WebshareSDK/{__version__} (Python; {platform.python_version()})")
         # When the user injects an http_client without an explicit timeout,
         # the injected client's own timeout configuration is respected.
         self._defer_timeout_to_http_client = False
@@ -116,6 +121,7 @@ class BaseClient:
         headers = build_headers(
             token=token,
             user_agent=self.user_agent,
+            source=self.source,
             default_headers=self.default_headers,
             client_subuser_id=self.subuser_id,
             client_federated_user_id=self.federated_user_id,

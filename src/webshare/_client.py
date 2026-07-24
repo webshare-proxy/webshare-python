@@ -90,6 +90,8 @@ class Webshare(BaseClient):
         unauthenticated: Construct a credential-free client for the handful
             of unauthenticated endpoints; calling an authenticated operation
             on such a client raises ``WebshareError``.
+        source: Replaces the ``X-Webshare-Source`` caller-identification
+            header (default ``WebshareSDK/<version> (Python; <runtime>)``).
     """
 
     def __init__(
@@ -106,6 +108,7 @@ class Webshare(BaseClient):
         federated_user_id: int | str | None = None,
         retry_non_idempotent: bool = False,
         unauthenticated: bool = False,
+        source: str | None = None,
     ) -> None:
         super().__init__(
             base_url=base_url,
@@ -115,6 +118,7 @@ class Webshare(BaseClient):
             subuser_id=subuser_id,
             federated_user_id=federated_user_id,
             retry_non_idempotent=retry_non_idempotent,
+            source=source,
         )
         self._credentials_provider: CredentialsProvider | None
         if unauthenticated:
