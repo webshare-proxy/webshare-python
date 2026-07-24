@@ -23,11 +23,34 @@ def test_400_field_errors(server: MockServer) -> None:
     assert error.field_errors == {"mode": ["This field is required."]}
 
 
+def test_400_field_errors_object_form(server: MockServer) -> None:
+    # The live API returns lists of objects, not the documented list of
+    # strings; this is the real shape verbatim.
+    server.enqueue(
+        status=400,
+        json_body={"mode": [{"message": "This field is required.", "code": "required"}]},
+    )
+    with pytest.raises(webshare.BadRequestError) as excinfo:
+        make_client(server).proxies.list(mode="direct")
+    error = excinfo.value
+    assert error.status_code == 400
+    assert error.field_errors == {"mode": ["This field is required."]}
+
+
+def test_400_field_errors_bare_string_value(server: MockServer) -> None:
+    server.enqueue(status=400, json_body={"mode": "This field is required."})
+    with pytest.raises(webshare.BadRequestError) as excinfo:
+        make_client(server).proxies.list(mode="direct")
+    assert excinfo.value.field_errors == {"mode": ["This field is required."]}
+
+
 def test_401_authentication_error(server: MockServer) -> None:
     server.enqueue(status=401, json_body={"detail": "Invalid token."})
     with pytest.raises(webshare.AuthenticationError) as excinfo:
         make_client(server).profile.get()
     assert excinfo.value.detail == "Invalid token."
+    # The live API does not send X-Request-ID; absence yields None.
+    assert excinfo.value.request_id is None
 
 
 def test_403_surfaces_code(server: MockServer) -> None:

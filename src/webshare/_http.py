@@ -327,6 +327,28 @@ _ERROR_CLASSES: dict[int, type[APIError]] = {
 }
 
 
+def _extract_field_messages(value: object) -> list[str] | None:
+    """Extract validation messages for a single field.
+
+    The docs show lists of strings, but the live API returns lists of objects
+    (``[{"message": "...", "code": "..."}]``); bare strings also occur. All
+    three shapes are accepted.
+    """
+    if isinstance(value, str):
+        return [value]
+    if not isinstance(value, list):
+        return None
+    messages: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            messages.append(item)
+        elif isinstance(item, dict) and isinstance(item.get("message"), str):
+            messages.append(item["message"])
+        else:
+            return None
+    return messages or None
+
+
 def make_api_error(
     *,
     status_code: int,
@@ -336,9 +358,10 @@ def make_api_error(
 ) -> APIError:
     """Map an error response onto the typed exception hierarchy.
 
-    Body parsing is tolerant: DRF ``{"detail": ...}`` bodies, field-error maps,
-    bare JSON strings and non-JSON bodies are all accepted. The captured body
-    is capped at 1 MiB and the human-facing detail truncated to ~2 KB.
+    Body parsing is tolerant: DRF ``{"detail": ...}`` bodies, field-error maps
+    (both string-list and message-object forms), bare JSON strings and
+    non-JSON bodies are all accepted. The captured body is capped at 1 MiB and
+    the human-facing detail truncated to ~2 KB.
     """
     body_text = body_text[:MAX_ERROR_BODY_BYTES]
     parsed: object
@@ -362,8 +385,9 @@ def make_api_error(
         for key, value in parsed.items():
             if key in ("detail", "code"):
                 continue
-            if isinstance(value, list) and all(isinstance(item, str) for item in value):
-                field_errors[key] = list(value)
+            messages = _extract_field_messages(value)
+            if messages:
+                field_errors[key] = messages
     elif parsed is None and body_text:
         detail = body_text
 
