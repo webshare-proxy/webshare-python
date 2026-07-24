@@ -68,7 +68,7 @@ def _download_spec(
             "bytes__lte": bytes__lte,
             "plan_id": plan_id,
         },
-        authenticated=False,
+        auth="none",
     )
 
 

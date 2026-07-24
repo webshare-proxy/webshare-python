@@ -79,7 +79,7 @@ def _download_spec(
             search=search,
         ),
         query={"plan_id": plan_id},
-        authenticated=False,
+        auth="none",
     )
 
 

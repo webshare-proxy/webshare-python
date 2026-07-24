@@ -96,7 +96,7 @@ def _get_code_info_spec(*, referral_code: str) -> RequestSpec:
         method="GET",
         path="/api/v2/referral/code/info/",
         query={"referral_code": referral_code},
-        authenticated=False,
+        auth="none",
     )
 
 

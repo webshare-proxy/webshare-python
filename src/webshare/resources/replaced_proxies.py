@@ -52,7 +52,7 @@ def _download_spec(
             "proxy_list_replacement": proxy_list_replacement,
             "proxy_protocol": proxy_protocol,
         },
-        authenticated=False,
+        auth="none",
     )
 
 

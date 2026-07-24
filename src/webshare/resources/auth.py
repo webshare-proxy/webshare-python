@@ -36,7 +36,7 @@ def _register_spec(
                 "marketing_email_accepted": marketing_email_accepted,
             }
         ),
-        authenticated=False,
+        auth="none",
     )
 
 
@@ -60,7 +60,7 @@ def _register_social_spec(
                 "marketing_email_accepted": marketing_email_accepted,
             }
         ),
-        authenticated=False,
+        auth="none",
     )
 
 
@@ -69,7 +69,7 @@ def _login_spec(*, email: str, password: str, recaptcha: str) -> RequestSpec:
         method="POST",
         path="/api/v2/login/",
         json_body={"email": email, "password": password, "recaptcha": recaptcha},
-        authenticated=False,
+        auth="none",
     )
 
 
@@ -78,7 +78,7 @@ def _login_social_spec(*, provider: Literal["google"], code: str, redirect_uri: 
         method="POST",
         path="/api/v2/login/social/",
         json_body={"provider": provider, "code": code, "redirect_uri": redirect_uri},
-        authenticated=False,
+        auth="none",
     )
 
 
@@ -99,7 +99,7 @@ def _request_password_reset_spec(*, email: str, recaptcha: str) -> RequestSpec:
         method="POST",
         path="/api/v2/resetpassword/",
         json_body={"email": email, "recaptcha": recaptcha},
-        authenticated=False,
+        auth="none",
     )
 
 
@@ -114,7 +114,7 @@ def _complete_password_reset_spec(
             "password_reset_token": password_reset_token,
             "recaptcha": recaptcha,
         },
-        authenticated=False,
+        auth="none",
     )
 
 
@@ -143,10 +143,12 @@ def _resend_activation_spec() -> RequestSpec:
 
 
 def _complete_activation_spec(*, activation_token: str) -> RequestSpec:
+    # Auth-optional per the docs: the token is sent when the client has one.
     return RequestSpec(
         method="POST",
         path="/api/v2/activation/complete/",
         json_body={"activation_token": activation_token},
+        auth="optional",
     )
 
 
