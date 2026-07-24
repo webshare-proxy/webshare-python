@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Literal
 
-from .._http import FileInput, RequestSpec, drop_json_nulls
+from .._http import FileInput, RequestSpec, buffer_files, drop_json_nulls
 from .._pagination import AsyncPage, SyncPage
 from .._requester import AsyncRequester, AsyncResource, SyncRequester, SyncResource
 from ..types.account import (
@@ -52,7 +52,8 @@ def _submit_evidence_spec(
         method="POST",
         path=f"/api/v2/verification/flow/{id}/submit_evidence/",
         multipart_data=data,
-        multipart_files=files,
+        # Buffered here so retried attempts re-send the same bytes.
+        multipart_files=buffer_files(files) if files is not None else None,
     )
 
 
@@ -100,7 +101,8 @@ def _submit_answer_spec(
         method="POST",
         path=f"/api/v2/verification/question/{question_id}/answer/",
         multipart_data={"answer": answer},
-        multipart_files=files,
+        # Buffered here so retried attempts re-send the same bytes.
+        multipart_files=buffer_files(files) if files is not None else None,
     )
 
 
