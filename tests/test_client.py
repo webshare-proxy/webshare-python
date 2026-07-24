@@ -111,3 +111,87 @@ def test_context_manager_and_base_url_join(server: MockServer) -> None:
     with Webshare(base_url=server.base_url + "/", api_key="k") as client:
         client.profile.get()
     assert server.requests[0].path == "/api/v2/profile/"
+
+
+def test_empty_api_key_treated_as_absent(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("WEBSHARE_API_KEY", raising=False)
+    with pytest.raises(webshare.WebshareError, match="WEBSHARE_API_KEY"):
+        Webshare(api_key="")
+    monkeypatch.setenv("WEBSHARE_API_KEY", "")
+    with pytest.raises(webshare.WebshareError, match="WEBSHARE_API_KEY"):
+        Webshare()
+
+
+def test_empty_api_key_falls_back_to_environment(
+    server: MockServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WEBSHARE_API_KEY", "env-key")
+    server.enqueue(json_body=PROFILE)
+    client = Webshare(base_url=server.base_url, api_key="")
+    client.profile.get()
+    assert server.requests[0].headers["Authorization"] == "Token env-key"
+
+
+def test_unauthenticated_operations_never_send_token(server: MockServer) -> None:
+    # Even on a credentialed client, `security: []` operations do not send
+    # the Authorization header.
+    server.enqueue(json_body={"referral_code": "abc", "promo_type": None, "promo_value": None})
+    client = make_client(server)
+    info = client.referral.get_code_info(referral_code="abc")
+    assert info.referral_code == "abc"
+    assert "Authorization" not in server.requests[0].headers
+
+
+def test_unauthenticated_client(server: MockServer, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("WEBSHARE_API_KEY", raising=False)
+    client = Webshare(base_url=server.base_url, unauthenticated=True)
+    server.enqueue(json_body={"referral_code": "abc", "promo_type": None, "promo_value": None})
+    client.referral.get_code_info(referral_code="abc")
+    assert "Authorization" not in server.requests[0].headers
+    # Authenticated operations fail client-side with a clear message.
+    with pytest.raises(webshare.WebshareError, match="unauthenticated=True"):
+        client.profile.get()
+    assert len(server.requests) == 1
+
+
+def test_auth_optional_operation(server: MockServer) -> None:
+    # complete_activation is auth-optional: the token is sent when available
+    # and omitted on an unauthenticated client.
+    server.enqueue(json_body={"token": "new"})
+    make_client(server).auth.complete_activation(activation_token="t")
+    assert server.requests[0].headers["Authorization"] == "Token test-key"
+    server.enqueue(json_body={"token": "new"})
+    Webshare(base_url=server.base_url, unauthenticated=True).auth.complete_activation(
+        activation_token="t"
+    )
+    assert "Authorization" not in server.requests[1].headers
+
+
+def test_default_headers_merge_case_insensitively(server: MockServer) -> None:
+    server.enqueue(json_body=PROFILE)
+    client = make_client(server, default_headers={"accept": "text/plain"})
+    client.profile.get()
+    request = server.requests[0]
+    accept_headers = [(k, v) for k, v in request.raw_headers if k.lower() == "accept"]
+    assert accept_headers == [("accept", "text/plain")]
+
+
+def test_injected_http_client_timeout_is_respected(server: MockServer) -> None:
+    import httpx
+
+    server.enqueue(json_body=PROFILE, delay=1.0)
+    http_client = httpx.Client(timeout=0.1)
+    client = Webshare(base_url=server.base_url, api_key="k", http_client=http_client)
+    with pytest.raises(webshare.APITimeoutError):
+        client.profile.get(max_retries=0)
+    http_client.close()
+
+
+def test_explicit_timeout_overrides_injected_http_client(server: MockServer) -> None:
+    import httpx
+
+    server.enqueue(json_body=PROFILE, delay=0.3)
+    http_client = httpx.Client(timeout=0.05)
+    client = Webshare(base_url=server.base_url, api_key="k", http_client=http_client, timeout=5.0)
+    assert client.profile.get(max_retries=0).id == 1
+    http_client.close()

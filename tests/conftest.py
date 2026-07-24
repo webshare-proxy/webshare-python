@@ -26,6 +26,7 @@ class RecordedRequest:
     path: str
     query: dict[str, list[str]]
     headers: dict[str, str]
+    raw_headers: list[tuple[str, str]]
     body: bytes
 
     def json(self) -> Any:
@@ -65,6 +66,7 @@ class MockServer:
                             path=split.path,
                             query=parse_qs(split.query),
                             headers=dict(self.headers.items()),
+                            raw_headers=list(self.headers.items()),
                             body=body,
                         )
                     )
