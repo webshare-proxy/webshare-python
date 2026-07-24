@@ -42,7 +42,7 @@ dev = [
 packages = ["src/webshare"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "examples", "README.md", "LICENSE", "DESIGN.md"]
+include = ["src", "tests", "examples", "README.md", "REFERENCE.md", "LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
