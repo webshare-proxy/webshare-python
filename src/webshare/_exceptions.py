@@ -17,6 +17,7 @@ __all__ = [
     "NotFoundError",
     "PermissionDeniedError",
     "RateLimitError",
+    "ResponseDecodeError",
     "WebshareError",
 ]
 
@@ -32,10 +33,15 @@ class APIError(WebshareError):
         status_code: HTTP status code of the response.
         code: API error code string (e.g. ``2fa_needed``), when present.
         request_id: Value of the ``X-Request-ID`` response header, when present.
-        detail: Human-readable error message.
+        detail: Human-readable error message (truncated to ~2 KB; the full
+            captured body remains on ``body``).
         field_errors: Field validation errors, mapping field name to a list of
             messages (e.g. ``{"mode": ["This field is required."]}``).
-        body: The parsed response body (or raw text when not JSON).
+        body: The parsed response body (or raw text when not JSON), capped at
+            1 MiB.
+        retry_after: Seconds parsed from the ``Retry-After`` response header,
+            when present and valid. Useful for self-throttling calls that the
+            SDK does not retry (e.g. a 429 on POST).
     """
 
     def __init__(
@@ -48,6 +54,7 @@ class APIError(WebshareError):
         detail: str | None = None,
         field_errors: dict[str, list[str]] | None = None,
         body: object = None,
+        retry_after: float | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -56,6 +63,7 @@ class APIError(WebshareError):
         self.detail = detail
         self.field_errors = field_errors or {}
         self.body = body
+        self.retry_after = retry_after
 
 
 class BadRequestError(APIError):
@@ -84,6 +92,22 @@ class RateLimitError(APIError):
 
 class InternalServerError(APIError):
     """5xx server error."""
+
+
+class ResponseDecodeError(WebshareError):
+    """A success (2xx) response body could not be decoded as the expected
+    shape (non-JSON body, or structurally invalid JSON such as a malformed
+    pagination envelope).
+
+    Attributes:
+        status_code: HTTP status code of the response.
+        body: A snippet of the raw response body.
+    """
+
+    def __init__(self, message: str, *, status_code: int, body: str) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body
 
 
 class APIConnectionError(WebshareError):

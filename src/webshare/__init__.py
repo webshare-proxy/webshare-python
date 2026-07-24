@@ -4,9 +4,9 @@ Quickstart::
 
     import webshare
 
-    client = webshare.Webshare()  # reads WEBSHARE_API_KEY
-    for proxy in client.proxies.list(mode="direct"):
-        print(proxy.proxy_address, proxy.port)
+    with webshare.Webshare() as client:  # reads WEBSHARE_API_KEY
+        for proxy in client.proxies.list(mode="direct"):
+            print(proxy.proxy_address, proxy.port)
 """
 
 from . import types
@@ -22,6 +22,7 @@ from ._exceptions import (
     NotFoundError,
     PermissionDeniedError,
     RateLimitError,
+    ResponseDecodeError,
     WebshareError,
 )
 from ._pagination import AsyncPage, SyncPage
@@ -40,6 +41,7 @@ __all__ = [
     "NotFoundError",
     "PermissionDeniedError",
     "RateLimitError",
+    "ResponseDecodeError",
     "SyncPage",
     "Webshare",
     "WebshareError",

@@ -9,7 +9,12 @@ from typing import Any, TypeVar
 
 import httpx
 
-from ._base_client import BaseClient, missing_credentials_error, resolve_static_api_key
+from ._base_client import (
+    BaseClient,
+    auth_required_error,
+    missing_credentials_error,
+    resolve_static_api_key,
+)
 from ._exceptions import APIConnectionError, APITimeoutError
 from ._http import (
     DEFAULT_MAX_RETRIES,
@@ -18,6 +23,7 @@ from ._http import (
     compute_backoff,
     retry_delay,
 )
+from ._models import decode
 from ._pagination import AsyncPage
 from .resources import (
     AsyncAPIKeys,
@@ -56,6 +62,10 @@ class AsyncWebshare(BaseClient):
 
     Accepts the same options as ``Webshare``; ``credentials_provider`` may be
     a sync or async callable, and ``http_client`` is an ``httpx.AsyncClient``.
+    ``timeout`` bounds a single HTTP attempt (total call time may exceed it
+    with retries and Retry-After waits); when ``http_client`` is injected and
+    ``timeout`` is not set, the injected client's timeout configuration is
+    used.
     """
 
     def __init__(
@@ -71,6 +81,7 @@ class AsyncWebshare(BaseClient):
         subuser_id: int | str | None = None,
         federated_user_id: int | str | None = None,
         retry_non_idempotent: bool = False,
+        unauthenticated: bool = False,
     ) -> None:
         super().__init__(
             base_url=base_url,
@@ -81,8 +92,11 @@ class AsyncWebshare(BaseClient):
             federated_user_id=federated_user_id,
             retry_non_idempotent=retry_non_idempotent,
         )
-        if credentials_provider is not None:
-            self._credentials_provider: AsyncCredentialsProvider = credentials_provider
+        self._credentials_provider: AsyncCredentialsProvider | None
+        if unauthenticated:
+            self._credentials_provider = None
+        elif credentials_provider is not None:
+            self._credentials_provider = credentials_provider
         else:
             key = resolve_static_api_key(api_key)
             if key is None:
@@ -90,6 +104,7 @@ class AsyncWebshare(BaseClient):
             self._credentials_provider = lambda: key
         self._http = http_client if http_client is not None else httpx.AsyncClient()
         self._owns_http = http_client is None
+        self._defer_timeout_to_http_client = http_client is not None and timeout is None
 
         self.proxies = AsyncProxies(self)
         self.proxy_config = AsyncProxyConfigResource(self)
@@ -141,7 +156,13 @@ class AsyncWebshare(BaseClient):
         if seconds > 0:
             await asyncio.sleep(seconds)
 
-    async def _get_token(self) -> str:
+    async def _token_for(self, spec: RequestSpec) -> str | None:
+        if spec.auth == "none":
+            return None
+        if self._credentials_provider is None:
+            if spec.auth == "optional":
+                return None
+            raise auth_required_error()
         result = self._credentials_provider()
         if isinstance(result, str):
             return result
@@ -153,7 +174,9 @@ class AsyncWebshare(BaseClient):
         attempt = 0
         while True:
             remaining = max_retries - attempt
-            token = await self._get_token() if spec.authenticated else None
+            # Credentials are fetched per attempt so refreshed tokens are
+            # picked up mid-backoff.
+            token = await self._token_for(spec)
             try:
                 response = await self._http.request(
                     spec.method,
@@ -188,13 +211,13 @@ class AsyncWebshare(BaseClient):
         return self._json(await self._send(spec))
 
     async def request_model(self, spec: RequestSpec, cls: type[ModelT]) -> ModelT:
-        return self._decode_model(self._json(await self._send(spec)), cls)
+        return self._decode_model(await self._send(spec), cls)
 
     async def request_model_list(self, spec: RequestSpec, cls: type[ModelT]) -> list[ModelT]:
-        return self._decode_model_list(self._json(await self._send(spec)), cls)
+        return self._decode_model_list(await self._send(spec), cls)
 
     async def request_model_dict(self, spec: RequestSpec, cls: type[ModelT]) -> dict[str, ModelT]:
-        return self._decode_model_dict(self._json(await self._send(spec)), cls)
+        return self._decode_model_dict(await self._send(spec), cls)
 
     async def request_text(self, spec: RequestSpec) -> str:
         return (await self._send(spec)).text
@@ -203,10 +226,10 @@ class AsyncWebshare(BaseClient):
         return (await self._send(spec)).content
 
     async def request_page(self, spec: RequestSpec, item_cls: type[ModelT]) -> AsyncPage[ModelT]:
-        data = self._json(await self._send(spec))
-        results, count, next_url, previous = self._parse_envelope(data)
+        response = await self._send(spec)
+        results, count, next_url, previous = self._parse_envelope(response)
         return AsyncPage(
-            results=[self._decode_model(item, item_cls) for item in results],
+            results=[decode(item_cls, item) for item in results],
             count=count,
             next=next_url,
             previous=previous,

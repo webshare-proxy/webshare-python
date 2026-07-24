@@ -78,3 +78,35 @@ def test_errors_are_webshare_errors(server: MockServer) -> None:
     server.enqueue(status=400, json_body={"detail": "bad"})
     with pytest.raises(webshare.WebshareError):
         make_client(server).profile.get()
+
+
+def test_2xx_non_json_raises_response_decode_error(server: MockServer) -> None:
+    server.enqueue(status=200, text="<html>maintenance</html>", content_type="text/html")
+    with pytest.raises(webshare.ResponseDecodeError) as excinfo:
+        make_client(server).profile.get()
+    error = excinfo.value
+    assert isinstance(error, webshare.WebshareError)
+    assert error.status_code == 200
+    assert "<html>maintenance</html>" in error.body
+
+
+def test_malformed_envelope_raises_response_decode_error(server: MockServer) -> None:
+    server.enqueue(status=200, json_body={"count": 1, "next": None, "results": None})
+    with pytest.raises(webshare.ResponseDecodeError) as excinfo:
+        make_client(server).proxies.list(mode="direct")
+    assert excinfo.value.status_code == 200
+    assert "results" in str(excinfo.value)
+
+
+def test_error_body_capped_and_detail_truncated(server: MockServer) -> None:
+    huge = "x" * (1024 * 1024 + 4096)
+    server.enqueue(status=500, text=huge)
+    with pytest.raises(webshare.InternalServerError) as excinfo:
+        make_client(server).profile.get()
+    error = excinfo.value
+    # Raw capture is capped at 1 MiB; the human-facing detail at ~2 KB.
+    assert isinstance(error.body, str)
+    assert len(error.body) == 1024 * 1024
+    assert error.detail is not None
+    assert len(error.detail) < 2200
+    assert len(str(error)) < 2200

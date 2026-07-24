@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 
 import httpx
 
-from ._exceptions import WebshareError
+from ._exceptions import ResponseDecodeError, WebshareError
 from ._http import (
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
@@ -19,7 +19,10 @@ from ._http import (
     is_idempotent,
     join_url,
     make_api_error,
+    parse_retry_after,
     prepare_files,
+    same_origin,
+    truncate_text,
 )
 from ._models import decode
 from ._version import __version__
@@ -28,21 +31,41 @@ API_KEY_ENV_VAR = "WEBSHARE_API_KEY"
 
 ModelT = TypeVar("ModelT")
 
+_BODY_SNIPPET_CHARS = 2048
+
 _MISSING_CREDENTIALS_MESSAGE = (
     "No API key provided. Pass api_key=..., set the WEBSHARE_API_KEY environment "
     "variable, or pass credentials_provider=... to the client constructor."
 )
 
+_AUTH_REQUIRED_MESSAGE = (
+    "This operation requires authentication, but the client was constructed "
+    "with unauthenticated=True. Construct the client with api_key=..., the "
+    "WEBSHARE_API_KEY environment variable, or credentials_provider=... to "
+    "call it."
+)
+
 
 def resolve_static_api_key(api_key: str | None) -> str | None:
-    """Resolve an explicit API key, falling back to ``WEBSHARE_API_KEY``."""
-    if api_key is not None:
+    """Resolve an explicit API key, falling back to ``WEBSHARE_API_KEY``.
+
+    Empty strings (explicit or from the environment) are treated as absent.
+    """
+    if api_key:
         return api_key
-    return os.environ.get(API_KEY_ENV_VAR)
+    return os.environ.get(API_KEY_ENV_VAR) or None
 
 
 def missing_credentials_error() -> WebshareError:
     return WebshareError(_MISSING_CREDENTIALS_MESSAGE)
+
+
+def auth_required_error() -> WebshareError:
+    return WebshareError(_AUTH_REQUIRED_MESSAGE)
+
+
+def _body_snippet(response: httpx.Response) -> str:
+    return truncate_text(response.text, _BODY_SNIPPET_CHARS)
 
 
 class BaseClient:
@@ -67,14 +90,25 @@ class BaseClient:
         self.federated_user_id = federated_user_id
         self.retry_non_idempotent = retry_non_idempotent
         self.user_agent = f"webshare-python/{__version__}"
+        # When the user injects an http_client without an explicit timeout,
+        # the injected client's own timeout configuration is respected.
+        self._defer_timeout_to_http_client = False
 
     # -- request assembly ------------------------------------------------
 
     def _request_url(self, spec: RequestSpec) -> str:
         if spec.absolute_url is not None:
             # Pagination `next` URLs are followed verbatim; resolve relative
-            # URLs against the configured base URL.
-            return urljoin(self.base_url + "/", spec.absolute_url)
+            # URLs against the configured base URL, and refuse to follow
+            # cross-origin URLs (the auth token must never leave the
+            # configured origin).
+            url = urljoin(self.base_url + "/", spec.absolute_url)
+            if not same_origin(url, self.base_url):
+                raise WebshareError(
+                    f"Refusing to follow cross-origin URL {url!r}: it does not "
+                    f"match the client base URL origin ({self.base_url!r})."
+                )
+            return url
         return join_url(self.base_url, spec.path)
 
     def _request_kwargs(self, spec: RequestSpec, token: str | None) -> dict[str, Any]:
@@ -88,10 +122,13 @@ class BaseClient:
             options=options,
             has_json_body=spec.json_body is not None,
         )
-        kwargs: dict[str, Any] = {
-            "headers": headers,
-            "timeout": options.timeout if options.timeout is not None else self.timeout,
-        }
+        if options.timeout is not None:
+            timeout: Any = options.timeout
+        elif self._defer_timeout_to_http_client:
+            timeout = httpx.USE_CLIENT_DEFAULT
+        else:
+            timeout = self.timeout
+        kwargs: dict[str, Any] = {"headers": headers, "timeout": timeout}
         if spec.absolute_url is None:
             query = encode_query(spec.query)
             if query:
@@ -129,39 +166,75 @@ class BaseClient:
                 status_code=response.status_code,
                 body_text=response.text,
                 request_id=response.headers.get("X-Request-ID"),
+                retry_after=parse_retry_after(response.headers.get("Retry-After")),
             )
 
     @staticmethod
     def _json(response: httpx.Response) -> Any:
         if response.status_code == 204 or not response.content:
             return None
-        return response.json()
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise ResponseDecodeError(
+                f"Expected a JSON response body (HTTP {response.status_code})",
+                status_code=response.status_code,
+                body=_body_snippet(response),
+            ) from exc
 
-    @staticmethod
-    def _decode_model(data: Any, cls: type[ModelT]) -> ModelT:
-        return decode(cls, data)
-
-    @staticmethod
-    def _decode_model_list(data: Any, cls: type[ModelT]) -> list[ModelT]:
-        if not isinstance(data, list):
-            raise TypeError(f"Expected a JSON array of {cls.__name__} objects")
-        return [decode(cls, item) for item in data]
-
-    @staticmethod
-    def _decode_model_dict(data: Any, cls: type[ModelT]) -> dict[str, ModelT]:
+    @classmethod
+    def _decode_model(cls, response: httpx.Response, model: type[ModelT]) -> ModelT:
+        data = cls._json(response)
         if not isinstance(data, dict):
-            raise TypeError(f"Expected a JSON object mapping keys to {cls.__name__} objects")
-        return {key: decode(cls, value) for key, value in data.items()}
+            raise ResponseDecodeError(
+                f"Expected a JSON object for {model.__name__} (HTTP {response.status_code})",
+                status_code=response.status_code,
+                body=_body_snippet(response),
+            )
+        return decode(model, data)
 
-    @staticmethod
+    @classmethod
+    def _decode_model_list(cls, response: httpx.Response, model: type[ModelT]) -> list[ModelT]:
+        data = cls._json(response)
+        if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
+            raise ResponseDecodeError(
+                f"Expected a JSON array of {model.__name__} objects (HTTP {response.status_code})",
+                status_code=response.status_code,
+                body=_body_snippet(response),
+            )
+        return [decode(model, item) for item in data]
+
+    @classmethod
+    def _decode_model_dict(cls, response: httpx.Response, model: type[ModelT]) -> dict[str, ModelT]:
+        data = cls._json(response)
+        if not isinstance(data, dict) or not all(
+            isinstance(value, dict) for value in data.values()
+        ):
+            raise ResponseDecodeError(
+                f"Expected a JSON object mapping keys to {model.__name__} objects "
+                f"(HTTP {response.status_code})",
+                status_code=response.status_code,
+                body=_body_snippet(response),
+            )
+        return {key: decode(model, value) for key, value in data.items()}
+
+    @classmethod
     def _parse_envelope(
-        data: Any,
+        cls, response: httpx.Response
     ) -> tuple[list[Any], int | None, str | None, str | None]:
-        if not isinstance(data, dict):
-            raise TypeError("Expected a paginated envelope object")
-        results = data.get("results")
-        if not isinstance(results, list):
-            results = []
+        data = cls._json(response)
+        results = data.get("results") if isinstance(data, dict) else None
+        if (
+            not isinstance(data, dict)
+            or not isinstance(results, list)
+            or not all(isinstance(item, dict) for item in results)
+        ):
+            raise ResponseDecodeError(
+                "Expected a pagination envelope with a `results` array "
+                f"(HTTP {response.status_code})",
+                status_code=response.status_code,
+                body=_body_snippet(response),
+            )
         count = data.get("count")
         next_url = data.get("next")
         previous = data.get("previous")
