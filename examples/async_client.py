@@ -15,7 +15,9 @@ async def main() -> None:
 
         # Plan-scoped calls take the plan id from client.plans.list().
         plans = await client.plans.list()
-        plan = next(p for p in plans.results if p.status == "active")
+        plan = next((p for p in plans.results if p.status == "active"), None)
+        if plan is None:
+            raise SystemExit("No active plan found on this account.")
 
         page = await client.proxies.list(mode="direct", plan_id=plan.id, page_size=25)
         async for proxy in page:

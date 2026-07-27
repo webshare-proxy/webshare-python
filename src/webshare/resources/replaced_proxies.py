@@ -45,7 +45,8 @@ def _download_spec(
         path="/api/v2/proxy/list/replaced/download/",
         query={
             "download_token": download_token,
-            "country_codes": "-".join(country_codes) if country_codes else None,
+            # Normalized to uppercase like proxies.download's sibling method.
+            "country_codes": "-".join(c.upper() for c in country_codes) if country_codes else None,
             "authentication_type": authentication_type,
             "mode": mode,
             "search": search,

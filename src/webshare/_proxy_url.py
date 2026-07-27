@@ -44,13 +44,13 @@ def _build_backbone_username(
     country codes first, then city, then session/rotate last."""
     parts = [username]
     for code in country_codes or ():
-        if not _COUNTRY_CODE_RE.match(code):
+        if not _COUNTRY_CODE_RE.fullmatch(code):
             raise ValueError(
                 f"Invalid country code {code!r}: must be a 2-letter ISO 3166-1 alpha-2 code."
             )
         parts.append(code.lower())
     if city is not None:
-        if not _CITY_RE.match(city):
+        if not _CITY_RE.fullmatch(city):
             raise ValueError(
                 f"Invalid city {city!r}: city names may contain only letters and underscores."
             )
@@ -59,7 +59,9 @@ def _build_backbone_username(
         raise ValueError("session_id and rotate are mutually exclusive.")
     if session_id is not None:
         session = str(session_id)
-        if not session.isdigit():
+        # `str.isdigit()` alone also accepts non-ASCII digit characters
+        # (e.g. superscripts, Arabic-indic digits); require plain ASCII 0-9.
+        if not (session.isascii() and session.isdigit()):
             raise ValueError(f"Invalid session_id {session_id!r}: must be numeric.")
         parts.append(session)
     elif rotate:
@@ -164,11 +166,14 @@ def proxy_list_download_path(
     search: str | None = None,
 ) -> str:
     """Build the path portion of the proxy list download URL."""
-    country_segment = "-".join(code.upper() for code in country_codes) if country_codes else "-"
+    country_segment = (
+        "-".join(quote(code.upper(), safe="") for code in country_codes) if country_codes else "-"
+    )
     search_segment = quote(search, safe="") if search else "-"
     return (
         f"/api/v2/proxy/list/download/{quote(token, safe='')}/{country_segment}/"
-        f"{proxy_protocol}/{authentication_method}/{endpoint_mode}/{search_segment}/"
+        f"{quote(proxy_protocol, safe='')}/{quote(authentication_method, safe='')}/"
+        f"{quote(endpoint_mode, safe='')}/{search_segment}/"
     )
 
 

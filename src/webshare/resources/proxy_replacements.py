@@ -114,8 +114,8 @@ class ProxyReplacements(SyncResource):
         ``proxies_removed``/``proxies_added`` without modifying the list.
         ``to_replace`` supports types ``ip_range``, ``ip_address``, ``asn``,
         ``country``; ``replace_with`` supports ``ip_range``, ``asn``,
-        ``country``, ``any`` (not ``ip_address``). Unavailable when
-        ``plan.pool_filter`` is ``residential``.
+        ``country``, ``any`` (not ``ip_address``). Unavailable when the
+        plan's ``proxy_subtype`` is ``residential``.
         """
         return self._client.request_model(
             _create_spec(

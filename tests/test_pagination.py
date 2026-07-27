@@ -26,13 +26,12 @@ def test_sync_iteration_across_pages(server: MockServer) -> None:
     next_path = "/api/v2/proxy/list/?mode=direct&page=2"
     server.enqueue(json_body=_page(server, ["d-1", "d-2"], next_path))
     server.enqueue(json_body=_page(server, ["d-3"], None))
-    client = Webshare(base_url=server.base_url, api_key="k")
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        page = client.proxies.list(mode="direct")
+        assert page.count == 3
+        assert [p.id for p in page.results] == ["d-1", "d-2"]
 
-    page = client.proxies.list(mode="direct")
-    assert page.count == 3
-    assert [p.id for p in page.results] == ["d-1", "d-2"]
-
-    ids = [proxy.id for proxy in page]
+        ids = [proxy.id for proxy in page]
     assert ids == ["d-1", "d-2", "d-3"]
     assert len(server.requests) == 2
     # The next URL is followed verbatim.
@@ -44,13 +43,12 @@ def test_sync_iteration_across_pages(server: MockServer) -> None:
 def test_sync_next_page(server: MockServer) -> None:
     server.enqueue(json_body=_page(server, ["d-1"], "/api/v2/proxy/list/?page=2"))
     server.enqueue(json_body=_page(server, ["d-2"], None))
-    client = Webshare(base_url=server.base_url, api_key="k")
-
-    page = client.proxies.list(mode="direct")
-    second = page.next_page()
-    assert second is not None
-    assert [p.id for p in second.results] == ["d-2"]
-    assert second.next_page() is None
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        page = client.proxies.list(mode="direct")
+        second = page.next_page()
+        assert second is not None
+        assert [p.id for p in second.results] == ["d-2"]
+        assert second.next_page() is None
 
 
 async def test_async_iteration_across_pages(server: MockServer) -> None:
@@ -71,10 +69,10 @@ def test_cross_origin_next_url_is_refused(server: MockServer) -> None:
         "results": [_proxy("d-1")],
     }
     server.enqueue(json_body=page_body)
-    client = Webshare(base_url=server.base_url, api_key="k")
-    page = client.proxies.list(mode="direct")
-    with pytest.raises(WebshareError, match="cross-origin"):
-        list(page)
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        page = client.proxies.list(mode="direct")
+        with pytest.raises(WebshareError, match="cross-origin"):
+            list(page)
     # The token was never sent to the foreign origin.
     assert len(server.requests) == 1
 
@@ -107,10 +105,9 @@ def test_starting_after_pagination(server: MockServer) -> None:
         }
     )
     server.enqueue(json_body={"count": 2, "next": None, "previous": None, "results": [activity]})
-    client = Webshare(base_url=server.base_url, api_key="k")
-
-    page = client.proxy_activity.list(page_size=1)
-    items = list(page)
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        page = client.proxy_activity.list(page_size=1)
+        items = list(page)
     assert len(items) == 2
     assert items[0].protocol == "http"
     assert server.requests[0].query == {"page_size": ["1"]}

@@ -10,8 +10,11 @@ from typing import Any, TypeVar
 import httpx
 
 from webshare._base_client import (
+    NOT_GIVEN,
     BaseClient,
+    _NotGiven,
     auth_required_error,
+    conflicting_credentials_error,
     missing_credentials_error,
     resolve_static_api_key,
 )
@@ -70,8 +73,10 @@ class Webshare(BaseClient):
         timeout: Request timeout in seconds (default 60). The timeout bounds
             a single HTTP attempt (including reading the response body);
             total call time may exceed it when retries and Retry-After
-            waits occur. When ``http_client`` is injected and ``timeout`` is
-            not set, the injected client's timeout configuration is used.
+            waits occur. Pass ``None`` explicitly for no timeout (httpx's
+            infinite wait). When ``http_client`` is injected and ``timeout``
+            is omitted entirely, the injected client's timeout configuration
+            is used instead.
         max_retries: Default retry count for retryable failures (default 2).
         http_client: An externally managed ``httpx.Client`` to send requests
             with.
@@ -97,7 +102,7 @@ class Webshare(BaseClient):
         api_key: str | None = None,
         credentials_provider: CredentialsProvider | None = None,
         base_url: str | None = None,
-        timeout: float | None = None,
+        timeout: float | _NotGiven | None = NOT_GIVEN,
         max_retries: int = DEFAULT_MAX_RETRIES,
         http_client: httpx.Client | None = None,
         default_headers: Mapping[str, str] | None = None,
@@ -121,15 +126,19 @@ class Webshare(BaseClient):
         if unauthenticated:
             self._credentials_provider = None
         elif credentials_provider is not None:
+            if api_key is not None:
+                raise conflicting_credentials_error()
             self._credentials_provider = credentials_provider
         else:
             key = resolve_static_api_key(api_key)
             if key is None:
                 raise missing_credentials_error()
             self._credentials_provider = lambda: key
-        self._http = http_client if http_client is not None else httpx.Client()
+        self._http = http_client if http_client is not None else httpx.Client(follow_redirects=True)
         self._owns_http = http_client is None
-        self._defer_timeout_to_http_client = http_client is not None and timeout is None
+        self._defer_timeout_to_http_client = http_client is not None and isinstance(
+            timeout, _NotGiven
+        )
 
         self.proxies = Proxies(self)
         self.proxy_config = ProxyConfigResource(self)

@@ -32,11 +32,29 @@ API_KEY_ENV_VAR = "WEBSHARE_API_KEY"
 
 ModelT = TypeVar("ModelT")
 
+
+class _NotGiven:
+    """Sentinel distinguishing an omitted ``timeout`` from an explicit
+    ``timeout=None`` (which requests httpx's no-timeout / infinite-wait
+    behavior)."""
+
+    def __repr__(self) -> str:
+        return "NOT_GIVEN"
+
+
+NOT_GIVEN = _NotGiven()
+
 _BODY_SNIPPET_CHARS = 2048
 
 _MISSING_CREDENTIALS_MESSAGE = (
     "No API key provided. Pass api_key=..., set the WEBSHARE_API_KEY environment "
     "variable, or pass credentials_provider=... to the client constructor."
+)
+
+_CONFLICTING_CREDENTIALS_MESSAGE = (
+    "Pass either api_key= or credentials_provider= to the client constructor, not "
+    "both — credentials_provider would otherwise silently take precedence and the "
+    "api_key would be ignored."
 )
 
 _AUTH_REQUIRED_MESSAGE = (
@@ -61,6 +79,10 @@ def missing_credentials_error() -> WebshareError:
     return WebshareError(_MISSING_CREDENTIALS_MESSAGE)
 
 
+def conflicting_credentials_error() -> WebshareError:
+    return WebshareError(_CONFLICTING_CREDENTIALS_MESSAGE)
+
+
 def auth_required_error() -> WebshareError:
     return WebshareError(_AUTH_REQUIRED_MESSAGE)
 
@@ -76,7 +98,7 @@ class BaseClient:
         self,
         *,
         base_url: str | None,
-        timeout: float | None,
+        timeout: float | _NotGiven | None,
         max_retries: int,
         default_headers: Mapping[str, str] | None,
         subuser_id: int | str | None,
@@ -85,7 +107,7 @@ class BaseClient:
         source: str | None,
     ) -> None:
         self.base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
-        self.timeout = DEFAULT_TIMEOUT if timeout is None else timeout
+        self.timeout = DEFAULT_TIMEOUT if isinstance(timeout, _NotGiven) else timeout
         self.max_retries = max_retries
         self.default_headers = dict(default_headers) if default_headers else None
         self.subuser_id = subuser_id
