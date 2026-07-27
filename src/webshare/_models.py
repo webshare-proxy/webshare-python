@@ -120,7 +120,12 @@ def _coerce(tp: Any, value: Any) -> Any:
 def decode(cls: type[ModelT], data: object) -> ModelT:
     """Decode a JSON object into the dataclass ``cls``.
 
-    Unknown wire fields are ignored and missing fields become ``None``.
+    Unknown wire fields are ignored. A field absent from the wire payload is
+    passed as ``None`` only when the dataclass field itself has no default
+    (today, every model field is declared without one); a field that *does*
+    declare a default or ``default_factory`` is omitted from the constructor
+    call so that default applies, rather than being silently clobbered by an
+    explicit ``None``.
     """
     if not isinstance(data, dict):
         raise TypeError(f"Cannot decode {cls.__name__} from {type(data).__name__}")
@@ -128,6 +133,8 @@ def decode(cls: type[ModelT], data: object) -> ModelT:
     kwargs: dict[str, Any] = {}
     for field in dataclasses.fields(cast(Any, cls)):
         wire_name = field.name[:-1] if field.name.endswith("_") else field.name
-        raw = data.get(wire_name)
-        kwargs[field.name] = _coerce(hints.get(field.name, Any), raw)
+        if wire_name in data:
+            kwargs[field.name] = _coerce(hints.get(field.name, Any), data[wire_name])
+        elif field.default is dataclasses.MISSING and field.default_factory is dataclasses.MISSING:
+            kwargs[field.name] = None
     return cls(**kwargs)

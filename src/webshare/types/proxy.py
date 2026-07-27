@@ -235,10 +235,10 @@ class ProxyActivity:
     ip_address: str | None
     hostname: str | None
     domain: str | None
-    port: float | None
-    proxy_port: float | None
+    port: int | None
+    proxy_port: int | None
     listen_address: str | None
-    listen_port: float | None
+    listen_port: int | None
 
 
 @dataclass
