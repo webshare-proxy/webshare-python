@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 
-from webshare._http import RequestSpec
+from webshare._http import RequestSpec, drop_json_nulls
 from webshare._pagination import AsyncPage, SyncPage
 from webshare._requester import AsyncResource, SyncResource
 from webshare.types.commerce import Plan, PlanCancelResponse
@@ -32,7 +32,7 @@ def _update_spec(id: int, *, automatic_refresh_next_at: str | datetime | None) -
     return RequestSpec(
         method="PATCH",
         path=f"/api/v2/subscription/plan/{id}/",
-        json_body={"automatic_refresh_next_at": value},
+        json_body=drop_json_nulls({"automatic_refresh_next_at": value}),
     )
 
 
