@@ -11,7 +11,9 @@ import webshare
 def main() -> None:
     with webshare.Webshare() as client:
         # Plan-scoped calls take the plan id from client.plans.list().
-        plan = next(p for p in client.plans.list() if p.status == "active")
+        plan = next((p for p in client.plans.list() if p.status == "active"), None)
+        if plan is None:
+            raise SystemExit("No active plan found on this account.")
         config = client.proxy_config.get(plan_id=plan.id)
         token = config.proxy_list_download_token
         assert token is not None

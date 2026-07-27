@@ -85,7 +85,8 @@ client = webshare.Webshare(api_key="your-api-key")
 
 For advanced use (for example OAuth tokens that need refreshing), pass a
 `credentials_provider` callable returning the token; it is called once per
-request. The async client also accepts async callables. `api_key` is shorthand
+attempt (so refreshed tokens are picked up on retries, not just on the first
+call). The async client also accepts async callables. `api_key` is shorthand
 for a static provider.
 
 ```python
@@ -159,8 +160,9 @@ never 2FA-challenged.
 ## Retries
 
 Failed requests are retried automatically with exponential backoff and full
-jitter (base 0.5s, cap 8s): connection errors, timeouts, 408, 429 and 5xx.
-`Retry-After` headers are honored (capped at 60s). The default is
+jitter (base 0.5s, cap 8s): connection errors, timeouts, and status codes 408,
+429, 500, 502, 503 and 504 (not every 5xx). `Retry-After` headers are honored
+(capped at 60s). The default is
 `max_retries=2` (three attempts total), configurable per client and per
 request. Only idempotent requests (GET/PUT/DELETE) are retried by default;
 pass `retry_non_idempotent=True` to the client to opt in POST/PATCH.
@@ -176,8 +178,10 @@ retries and `Retry-After` waits occur. Override it per client
 client.profile.get(timeout=5.0)
 ```
 
-If you inject your own `http_client` and do not set `timeout`, the injected
-client's timeout configuration is used.
+Pass `timeout=None` explicitly for no timeout (httpx's infinite wait) — this
+is distinct from omitting `timeout` entirely, which uses the 60-second
+default. If you inject your own `http_client` and omit `timeout` entirely, the
+injected client's timeout configuration is used instead.
 
 Every method also accepts per-request `headers`, `max_retries`, `subuser_id`
 (sent as `X-Subuser` for sub-user masquerading) and `federated_user_id` (sent
