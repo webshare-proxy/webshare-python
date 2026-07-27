@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from .._http import RequestSpec
-from .._pagination import AsyncPage, SyncPage
-from .._requester import AsyncResource, SyncResource
-from ..types.account import Notification
+from webshare._http import RequestSpec
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.account import Notification
 
 
 def _list_spec(

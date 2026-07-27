@@ -7,10 +7,9 @@ from pathlib import Path
 import pytest
 
 import webshare
+from tests.conftest import MockServer
 from webshare import AsyncWebshare, Webshare
 from webshare._http import compute_backoff, parse_retry_after
-
-from .conftest import MockServer
 
 PROFILE = {"id": 1, "email": "user@webshare.io"}
 

@@ -21,7 +21,7 @@ from collections.abc import Sequence
 from typing import Literal
 from urllib.parse import quote
 
-from ._http import DEFAULT_BASE_URL
+from webshare._http import DEFAULT_BASE_URL
 
 __all__ = ["BACKBONE_HOST", "build_proxy_list_download_url", "build_proxy_url"]
 

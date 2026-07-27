@@ -1,6 +1,6 @@
 """Typed models for Webshare API responses."""
 
-from .account import (
+from webshare.types.account import (
     AbuseReport,
     IDVerification,
     Notification,
@@ -17,7 +17,7 @@ from .account import (
     VerificationQuestion,
     VerificationThreshold,
 )
-from .commerce import (
+from webshare.types.commerce import (
     AssetInfo,
     AvailableFeature,
     AvailableSiteCheck,
@@ -47,7 +47,7 @@ from .commerce import (
     Transaction,
     TransactionPaymentMethod,
 )
-from .proxy import (
+from webshare.types.proxy import (
     AggregateStats,
     DownloadToken,
     ErrorReason,

@@ -5,9 +5,8 @@ from __future__ import annotations
 import pytest
 
 import webshare
+from tests.conftest import MockServer
 from webshare import AsyncWebshare, Webshare
-
-from .conftest import MockServer
 
 PROFILE = {"id": 1, "email": "user@webshare.io"}
 

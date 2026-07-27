@@ -7,9 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import MockServer
 from webshare import Webshare
-
-from .conftest import MockServer
 
 
 @pytest.fixture

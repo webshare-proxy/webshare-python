@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import IO, Any, Literal
 from urllib.parse import urlsplit
 
-from ._exceptions import (
+from webshare._exceptions import (
     APIError,
     AuthenticationError,
     BadRequestError,

@@ -9,23 +9,23 @@ from typing import Any, TypeVar
 
 import httpx
 
-from ._base_client import (
+from webshare._base_client import (
     BaseClient,
     auth_required_error,
     missing_credentials_error,
     resolve_static_api_key,
 )
-from ._exceptions import APIConnectionError, APITimeoutError
-from ._http import (
+from webshare._exceptions import APIConnectionError, APITimeoutError
+from webshare._http import (
     DEFAULT_MAX_RETRIES,
     RETRY_STATUS_CODES,
     RequestSpec,
     compute_backoff,
     retry_delay,
 )
-from ._models import decode
-from ._pagination import SyncPage
-from .resources import (
+from webshare._models import decode
+from webshare._pagination import SyncPage
+from webshare.resources import (
     Billing,
     DownloadTokens,
     IDVerificationResource,

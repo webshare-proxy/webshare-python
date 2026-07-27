@@ -10,8 +10,8 @@ from urllib.parse import urljoin
 
 import httpx
 
-from ._exceptions import ResponseDecodeError, WebshareError
-from ._http import (
+from webshare._exceptions import ResponseDecodeError, WebshareError
+from webshare._http import (
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
     RequestSpec,
@@ -25,8 +25,8 @@ from ._http import (
     same_origin,
     truncate_text,
 )
-from ._models import decode
-from ._version import __version__
+from webshare._models import decode
+from webshare._version import __version__
 
 API_KEY_ENV_VAR = "WEBSHARE_API_KEY"
 

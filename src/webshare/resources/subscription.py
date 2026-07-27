@@ -9,9 +9,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Literal
 
-from .._http import RequestSpec, encode_json_query
-from .._requester import AsyncResource, SyncResource
-from ..types.commerce import (
+from webshare._http import RequestSpec, encode_json_query
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.commerce import (
     AssetInfo,
     CustomizationOptions,
     Pricing,

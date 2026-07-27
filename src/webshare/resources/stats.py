@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 
-from .._http import RequestSpec
-from .._requester import AsyncResource, SyncResource
-from ..types.proxy import AggregateStats, ProxyStat
+from webshare._http import RequestSpec
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.proxy import AggregateStats, ProxyStat
 
 
 def _list_spec(

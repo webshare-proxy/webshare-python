@@ -5,9 +5,8 @@ from __future__ import annotations
 import pytest
 
 import webshare
+from tests.conftest import MockServer
 from webshare import Webshare
-
-from .conftest import MockServer
 
 
 def make_client(server: MockServer) -> Webshare:

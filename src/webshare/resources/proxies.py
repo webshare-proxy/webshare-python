@@ -6,11 +6,11 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Literal
 
-from .._http import RequestSpec
-from .._pagination import AsyncPage, SyncPage
-from .._proxy_url import build_proxy_list_download_url, proxy_list_download_path
-from .._requester import AsyncResource, SyncResource
-from ..types.proxy import Proxy
+from webshare._http import RequestSpec
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._proxy_url import build_proxy_list_download_url, proxy_list_download_path
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.proxy import Proxy
 
 
 def _list_spec(

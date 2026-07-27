@@ -1,26 +1,26 @@
 """Resource groups mounted on the Webshare clients."""
 
-from .billing import AsyncBilling, Billing
-from .download_tokens import AsyncDownloadTokens, DownloadTokens
-from .id_verification import AsyncIDVerificationResource, IDVerificationResource
-from .invoices import AsyncInvoices, Invoices
-from .ip_authorizations import AsyncIPAuthorizations, IPAuthorizations
-from .notifications import AsyncNotifications, Notifications
-from .payment_methods import AsyncPaymentMethods, PaymentMethods
-from .pending_payments import AsyncPendingPayments, PendingPayments
-from .plans import AsyncPlans, Plans
-from .profile import AsyncProfileResource, ProfileResource
-from .proxies import AsyncProxies, Proxies
-from .proxy_activity import AsyncProxyActivityResource, ProxyActivityResource
-from .proxy_config import AsyncProxyConfigResource, ProxyConfigResource
-from .proxy_replacements import AsyncProxyReplacements, ProxyReplacements
-from .referral import AsyncReferral, Referral
-from .replaced_proxies import AsyncReplacedProxies, ReplacedProxies
-from .stats import AsyncStats, Stats
-from .subscription import AsyncSubscriptionResource, SubscriptionResource
-from .subusers import AsyncSubusers, Subusers
-from .transactions import AsyncTransactions, Transactions
-from .verification import AsyncVerification, Verification
+from webshare.resources.billing import AsyncBilling, Billing
+from webshare.resources.download_tokens import AsyncDownloadTokens, DownloadTokens
+from webshare.resources.id_verification import AsyncIDVerificationResource, IDVerificationResource
+from webshare.resources.invoices import AsyncInvoices, Invoices
+from webshare.resources.ip_authorizations import AsyncIPAuthorizations, IPAuthorizations
+from webshare.resources.notifications import AsyncNotifications, Notifications
+from webshare.resources.payment_methods import AsyncPaymentMethods, PaymentMethods
+from webshare.resources.pending_payments import AsyncPendingPayments, PendingPayments
+from webshare.resources.plans import AsyncPlans, Plans
+from webshare.resources.profile import AsyncProfileResource, ProfileResource
+from webshare.resources.proxies import AsyncProxies, Proxies
+from webshare.resources.proxy_activity import AsyncProxyActivityResource, ProxyActivityResource
+from webshare.resources.proxy_config import AsyncProxyConfigResource, ProxyConfigResource
+from webshare.resources.proxy_replacements import AsyncProxyReplacements, ProxyReplacements
+from webshare.resources.referral import AsyncReferral, Referral
+from webshare.resources.replaced_proxies import AsyncReplacedProxies, ReplacedProxies
+from webshare.resources.stats import AsyncStats, Stats
+from webshare.resources.subscription import AsyncSubscriptionResource, SubscriptionResource
+from webshare.resources.subusers import AsyncSubusers, Subusers
+from webshare.resources.transactions import AsyncTransactions, Transactions
+from webshare.resources.verification import AsyncVerification, Verification
 
 __all__ = [
     "AsyncBilling",

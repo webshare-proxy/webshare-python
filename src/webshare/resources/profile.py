@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 
-from .._http import RequestSpec, drop_json_nulls
-from .._requester import AsyncResource, SyncResource
-from ..types.account import Profile, ProfilePreferences
+from webshare._http import RequestSpec, drop_json_nulls
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.account import Profile, ProfilePreferences
 
 
 def _get_spec() -> RequestSpec:

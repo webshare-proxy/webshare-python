@@ -9,10 +9,10 @@ Quickstart::
             print(proxy.proxy_address, proxy.port)
 """
 
-from . import types
-from ._async_client import AsyncWebshare
-from ._client import Webshare
-from ._exceptions import (
+from webshare import types
+from webshare._async_client import AsyncWebshare
+from webshare._client import Webshare
+from webshare._exceptions import (
     APIConnectionError,
     APIError,
     APITimeoutError,
@@ -25,9 +25,9 @@ from ._exceptions import (
     ResponseDecodeError,
     WebshareError,
 )
-from ._pagination import AsyncPage, SyncPage
-from ._proxy_url import build_proxy_list_download_url, build_proxy_url
-from ._version import __version__
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._proxy_url import build_proxy_list_download_url, build_proxy_url
+from webshare._version import __version__
 
 __all__ = [
     "APIConnectionError",

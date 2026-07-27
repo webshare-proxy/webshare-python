@@ -11,10 +11,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 
-from .._http import RequestSpec, drop_json_nulls
-from .._pagination import AsyncPage, SyncPage
-from .._requester import AsyncResource, SyncResource
-from ..types.proxy import Subuser
+from webshare._http import RequestSpec, drop_json_nulls
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.proxy import Subuser
 
 
 def _list_spec(*, page: int | None, page_size: int | None, plan_id: int | None) -> RequestSpec:

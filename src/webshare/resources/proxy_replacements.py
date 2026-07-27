@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
-from .._http import RequestSpec, drop_json_nulls
-from .._pagination import AsyncPage, SyncPage
-from .._requester import AsyncResource, SyncResource
-from ..types.proxy import ProxyReplacement
+from webshare._http import RequestSpec, drop_json_nulls
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.proxy import ProxyReplacement
 
 ReplacementState = Literal["validating", "validated", "processing", "completed", "failed"]
 

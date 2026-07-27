@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from .._http import RequestSpec
-from .._pagination import AsyncPage, SyncPage
-from .._requester import AsyncResource, SyncResource
-from ..types.proxy import IPAuthorization, WhatsMyIP
+from webshare._http import RequestSpec
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.proxy import IPAuthorization, WhatsMyIP
 
 
 def _list_spec(*, plan_id: int | None, page: int | None, page_size: int | None) -> RequestSpec:

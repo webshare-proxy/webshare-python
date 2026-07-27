@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Awaitable, Iterator
 from typing import Generic, Protocol, TypeVar
 
-from ._http import RequestSpec
+from webshare._http import RequestSpec
 
 T = TypeVar("T")
 

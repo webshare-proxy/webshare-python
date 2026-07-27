@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from .._http import RequestSpec, drop_json_nulls
-from .._requester import AsyncResource, SyncResource
-from ..types.commerce import BillingInfo
+from webshare._http import RequestSpec, drop_json_nulls
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.commerce import BillingInfo
 
 
 def _get_info_spec() -> RequestSpec:

@@ -10,10 +10,10 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Literal
 
-from .._http import FileInput, RequestSpec, buffer_files, drop_json_nulls
-from .._pagination import AsyncPage, SyncPage
-from .._requester import AsyncRequester, AsyncResource, SyncRequester, SyncResource
-from ..types.account import (
+from webshare._http import FileInput, RequestSpec, buffer_files, drop_json_nulls
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._requester import AsyncRequester, AsyncResource, SyncRequester, SyncResource
+from webshare.types.account import (
     AbuseReport,
     Suspension,
     VerificationAnswer,

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol, TypeVar
 
-from ._http import RequestSpec
-from ._pagination import AsyncPage, SyncPage
+from webshare._http import RequestSpec
+from webshare._pagination import AsyncPage, SyncPage
 
 ModelT = TypeVar("ModelT")
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from .._http import RequestSpec
-from .._requester import AsyncResource, SyncResource
+from webshare._http import RequestSpec
+from webshare._requester import AsyncResource, SyncResource
 
 
 def _download_spec(*, subscription_transaction_id: str) -> RequestSpec:

@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from tests.conftest import MockServer
 from webshare import AsyncWebshare, Webshare, WebshareError
 from webshare._http import RequestSpec
-
-from .conftest import MockServer
 
 
 def _proxy(id: str) -> dict[str, object]:

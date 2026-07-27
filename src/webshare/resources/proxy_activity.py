@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 
-from .._http import RequestSpec
-from .._pagination import AsyncPage, SyncPage
-from .._requester import AsyncResource, SyncResource
-from ..types.proxy import ProxyActivity
+from webshare._http import RequestSpec
+from webshare._pagination import AsyncPage, SyncPage
+from webshare._requester import AsyncResource, SyncResource
+from webshare.types.proxy import ProxyActivity
 
 
 def _list_spec(
