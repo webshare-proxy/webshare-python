@@ -18,8 +18,8 @@ def make_client(server: MockServer, **kwargs: object) -> Webshare:
 
 def test_auth_header_and_defaults(server: MockServer) -> None:
     server.enqueue(json_body=PROFILE)
-    client = make_client(server)
-    profile = client.profile.get()
+    with make_client(server) as client:
+        profile = client.profile.get()
     assert profile.id == 1
     assert profile.email == "user@webshare.io"
     request = server.requests[0]
@@ -33,8 +33,8 @@ def test_auth_header_and_defaults(server: MockServer) -> None:
 def test_api_key_from_environment(server: MockServer, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WEBSHARE_API_KEY", "env-key")
     server.enqueue(json_body=PROFILE)
-    client = Webshare(base_url=server.base_url)
-    client.profile.get()
+    with Webshare(base_url=server.base_url) as client:
+        client.profile.get()
     assert server.requests[0].headers["Authorization"] == "Token env-key"
 
 
@@ -46,13 +46,20 @@ def test_missing_credentials_raises(monkeypatch: pytest.MonkeyPatch) -> None:
         AsyncWebshare()
 
 
+def test_conflicting_credentials_raise(server: MockServer) -> None:
+    with pytest.raises(webshare.WebshareError, match="not both"):
+        Webshare(base_url=server.base_url, api_key="k", credentials_provider=lambda: "t")
+    with pytest.raises(webshare.WebshareError, match="not both"):
+        AsyncWebshare(base_url=server.base_url, api_key="k", credentials_provider=lambda: "t")
+
+
 def test_credentials_provider_called_per_request(server: MockServer) -> None:
     tokens = iter(["token-1", "token-2"])
-    client = Webshare(base_url=server.base_url, credentials_provider=lambda: next(tokens))
-    server.enqueue(json_body=PROFILE)
-    server.enqueue(json_body=PROFILE)
-    client.profile.get()
-    client.profile.get()
+    with Webshare(base_url=server.base_url, credentials_provider=lambda: next(tokens)) as client:
+        server.enqueue(json_body=PROFILE)
+        server.enqueue(json_body=PROFILE)
+        client.profile.get()
+        client.profile.get()
     assert server.requests[0].headers["Authorization"] == "Token token-1"
     assert server.requests[1].headers["Authorization"] == "Token token-2"
 
@@ -61,41 +68,40 @@ async def test_async_credentials_provider(server: MockServer) -> None:
     async def provider() -> str:
         return "async-token"
 
-    client = AsyncWebshare(base_url=server.base_url, credentials_provider=provider)
-    server.enqueue(json_body=PROFILE)
-    profile = await client.profile.get()
+    async with AsyncWebshare(base_url=server.base_url, credentials_provider=provider) as client:
+        server.enqueue(json_body=PROFILE)
+        profile = await client.profile.get()
     assert profile.email == "user@webshare.io"
     assert server.requests[0].headers["Authorization"] == "Token async-token"
-    await client.close()
 
 
 def test_default_and_per_request_headers(server: MockServer) -> None:
-    client = make_client(server, default_headers={"X-Team": "infra"})
-    server.enqueue(json_body=PROFILE)
-    client.profile.get(headers={"X-Trace": "abc"})
+    with make_client(server, default_headers={"X-Team": "infra"}) as client:
+        server.enqueue(json_body=PROFILE)
+        client.profile.get(headers={"X-Trace": "abc"})
     request = server.requests[0]
     assert request.headers["X-Team"] == "infra"
     assert request.headers["X-Trace"] == "abc"
 
 
 def test_subuser_and_federated_headers(server: MockServer) -> None:
-    client = make_client(server, subuser_id=7, federated_user_id=99)
-    server.enqueue(json_body={"count": 0, "next": None, "previous": None, "results": []})
-    server.enqueue(json_body={"count": 0, "next": None, "previous": None, "results": []})
-    client.proxies.list(mode="direct")
-    assert server.requests[0].headers["X-Subuser"] == "7"
-    assert server.requests[0].headers["X-Webshare-Federated-Access"] == "99"
-    # Per-request values override client-level values.
-    client.proxies.list(mode="direct", subuser_id=8, federated_user_id=100)
-    assert server.requests[1].headers["X-Subuser"] == "8"
-    assert server.requests[1].headers["X-Webshare-Federated-Access"] == "100"
+    with make_client(server, subuser_id=7, federated_user_id=99) as client:
+        server.enqueue(json_body={"count": 0, "next": None, "previous": None, "results": []})
+        server.enqueue(json_body={"count": 0, "next": None, "previous": None, "results": []})
+        client.proxies.list(mode="direct")
+        assert server.requests[0].headers["X-Subuser"] == "7"
+        assert server.requests[0].headers["X-Webshare-Federated-Access"] == "99"
+        # Per-request values override client-level values.
+        client.proxies.list(mode="direct", subuser_id=8, federated_user_id=100)
+        assert server.requests[1].headers["X-Subuser"] == "8"
+        assert server.requests[1].headers["X-Webshare-Federated-Access"] == "100"
 
 
 def test_timeout_raises_api_timeout_error(server: MockServer) -> None:
     server.enqueue(json_body=PROFILE, delay=1.0)
-    client = make_client(server, timeout=0.1, max_retries=0)
-    with pytest.raises(webshare.APITimeoutError):
-        client.profile.get()
+    with make_client(server, timeout=0.1, max_retries=0) as client:
+        with pytest.raises(webshare.APITimeoutError):
+            client.profile.get()
 
 
 async def test_async_timeout(server: MockServer) -> None:
@@ -103,6 +109,25 @@ async def test_async_timeout(server: MockServer) -> None:
     async with AsyncWebshare(base_url=server.base_url, api_key="k", timeout=0.1) as client:
         with pytest.raises(webshare.APITimeoutError):
             await client.profile.get(max_retries=0)
+
+
+def test_timeout_none_is_distinct_from_omitted() -> None:
+    # Omitted -> the 60s default; explicit None -> no timeout at all.
+    with Webshare(api_key="k") as default_client:
+        assert default_client.timeout == 60.0
+    with Webshare(api_key="k", timeout=None) as no_timeout_client:
+        assert no_timeout_client.timeout is None
+
+
+def test_redirects_are_followed(server: MockServer) -> None:
+    # Owned httpx clients follow redirects, so a 3xx surfaces the real
+    # response instead of a confusing decode error.
+    server.enqueue(status=302, headers={"Location": f"{server.base_url}/api/v2/profile/"})
+    server.enqueue(json_body=PROFILE)
+    with make_client(server) as client:
+        assert client.profile.get().id == 1
+    assert len(server.requests) == 2
+    assert server.requests[1].path == "/api/v2/profile/"
 
 
 def test_context_manager_and_base_url_join(server: MockServer) -> None:
@@ -126,8 +151,8 @@ def test_empty_api_key_falls_back_to_environment(
 ) -> None:
     monkeypatch.setenv("WEBSHARE_API_KEY", "env-key")
     server.enqueue(json_body=PROFILE)
-    client = Webshare(base_url=server.base_url, api_key="")
-    client.profile.get()
+    with Webshare(base_url=server.base_url, api_key="") as client:
+        client.profile.get()
     assert server.requests[0].headers["Authorization"] == "Token env-key"
 
 
@@ -135,21 +160,21 @@ def test_unauthenticated_operations_never_send_token(server: MockServer) -> None
     # Even on a credentialed client, `security: []` operations do not send
     # the Authorization header.
     server.enqueue(json_body={"referral_code": "abc", "promo_type": None, "promo_value": None})
-    client = make_client(server)
-    info = client.referral.get_code_info(referral_code="abc")
+    with make_client(server) as client:
+        info = client.referral.get_code_info(referral_code="abc")
     assert info.referral_code == "abc"
     assert "Authorization" not in server.requests[0].headers
 
 
 def test_unauthenticated_client(server: MockServer, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("WEBSHARE_API_KEY", raising=False)
-    client = Webshare(base_url=server.base_url, unauthenticated=True)
-    server.enqueue(json_body={"referral_code": "abc", "promo_type": None, "promo_value": None})
-    client.referral.get_code_info(referral_code="abc")
-    assert "Authorization" not in server.requests[0].headers
-    # Authenticated operations fail client-side with a clear message.
-    with pytest.raises(webshare.WebshareError, match="unauthenticated=True"):
-        client.profile.get()
+    with Webshare(base_url=server.base_url, unauthenticated=True) as client:
+        server.enqueue(json_body={"referral_code": "abc", "promo_type": None, "promo_value": None})
+        client.referral.get_code_info(referral_code="abc")
+        assert "Authorization" not in server.requests[0].headers
+        # Authenticated operations fail client-side with a clear message.
+        with pytest.raises(webshare.WebshareError, match="unauthenticated=True"):
+            client.profile.get()
     assert len(server.requests) == 1
 
 
@@ -157,7 +182,8 @@ def test_source_header_default_format(server: MockServer) -> None:
     import re
 
     server.enqueue(json_body=PROFILE)
-    make_client(server).profile.get()
+    with make_client(server) as client:
+        client.profile.get()
     source = server.requests[0].headers["X-Webshare-Source"]
     assert re.fullmatch(r"WebshareSDK/\d+\.\d+\.\d+ \(Python; \d+\.\d+\.\d+[^)]*\)", source), source
 
@@ -165,18 +191,18 @@ def test_source_header_default_format(server: MockServer) -> None:
 def test_source_header_override(server: MockServer) -> None:
     server.enqueue(json_body=PROFILE)
     server.enqueue(json_body=PROFILE)
-    client = make_client(server, source="WebshareCLI/1.2.3")
-    client.profile.get()
-    assert server.requests[0].headers["X-Webshare-Source"] == "WebshareCLI/1.2.3"
-    # Per-request headers still win over everything.
-    client.profile.get(headers={"X-Webshare-Source": "custom/0"})
-    assert server.requests[1].headers["X-Webshare-Source"] == "custom/0"
+    with make_client(server, source="WebshareCLI/1.2.3") as client:
+        client.profile.get()
+        assert server.requests[0].headers["X-Webshare-Source"] == "WebshareCLI/1.2.3"
+        # Per-request headers still win over everything.
+        client.profile.get(headers={"X-Webshare-Source": "custom/0"})
+        assert server.requests[1].headers["X-Webshare-Source"] == "custom/0"
 
 
 def test_default_headers_merge_case_insensitively(server: MockServer) -> None:
     server.enqueue(json_body=PROFILE)
-    client = make_client(server, default_headers={"accept": "text/plain"})
-    client.profile.get()
+    with make_client(server, default_headers={"accept": "text/plain"}) as client:
+        client.profile.get()
     request = server.requests[0]
     accept_headers = [(k, v) for k, v in request.raw_headers if k.lower() == "accept"]
     assert accept_headers == [("accept", "text/plain")]
@@ -187,9 +213,9 @@ def test_injected_http_client_timeout_is_respected(server: MockServer) -> None:
 
     server.enqueue(json_body=PROFILE, delay=1.0)
     http_client = httpx.Client(timeout=0.1)
-    client = Webshare(base_url=server.base_url, api_key="k", http_client=http_client)
-    with pytest.raises(webshare.APITimeoutError):
-        client.profile.get(max_retries=0)
+    with Webshare(base_url=server.base_url, api_key="k", http_client=http_client) as client:
+        with pytest.raises(webshare.APITimeoutError):
+            client.profile.get(max_retries=0)
     http_client.close()
 
 
@@ -198,6 +224,8 @@ def test_explicit_timeout_overrides_injected_http_client(server: MockServer) -> 
 
     server.enqueue(json_body=PROFILE, delay=0.3)
     http_client = httpx.Client(timeout=0.05)
-    client = Webshare(base_url=server.base_url, api_key="k", http_client=http_client, timeout=5.0)
-    assert client.profile.get(max_retries=0).id == 1
+    with Webshare(
+        base_url=server.base_url, api_key="k", http_client=http_client, timeout=5.0
+    ) as client:
+        assert client.profile.get(max_retries=0).id == 1
     http_client.close()
