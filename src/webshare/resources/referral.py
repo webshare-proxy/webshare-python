@@ -81,9 +81,12 @@ def _get_credit_spec(id: int) -> RequestSpec:
 
 
 def _list_earnouts_spec(*, page: int | None, page_size: int | None) -> RequestSpec:
-    # Note: the docs record this list path without a trailing slash.
+    # Verified against the live API: the docs record this list path without a
+    # trailing slash, but the server 301s that to the slashed path.
     return RequestSpec(
-        method="GET", path="/api/v2/referral/earnout", query={"page": page, "page_size": page_size}
+        method="GET",
+        path="/api/v2/referral/earnout/",
+        query={"page": page, "page_size": page_size},
     )
 
 
