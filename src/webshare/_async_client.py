@@ -10,8 +10,11 @@ from typing import Any, TypeVar
 import httpx
 
 from webshare._base_client import (
+    NOT_GIVEN,
     BaseClient,
+    _NotGiven,
     auth_required_error,
+    conflicting_credentials_error,
     missing_credentials_error,
     resolve_static_api_key,
 )
@@ -60,9 +63,9 @@ class AsyncWebshare(BaseClient):
     Accepts the same options as ``Webshare``; ``credentials_provider`` may be
     a sync or async callable, and ``http_client`` is an ``httpx.AsyncClient``.
     ``timeout`` bounds a single HTTP attempt (total call time may exceed it
-    with retries and Retry-After waits); when ``http_client`` is injected and
-    ``timeout`` is not set, the injected client's timeout configuration is
-    used.
+    with retries and Retry-After waits); pass ``None`` explicitly for no
+    timeout. When ``http_client`` is injected and ``timeout`` is omitted
+    entirely, the injected client's timeout configuration is used instead.
     """
 
     def __init__(
@@ -71,7 +74,7 @@ class AsyncWebshare(BaseClient):
         api_key: str | None = None,
         credentials_provider: AsyncCredentialsProvider | None = None,
         base_url: str | None = None,
-        timeout: float | None = None,
+        timeout: float | _NotGiven | None = NOT_GIVEN,
         max_retries: int = DEFAULT_MAX_RETRIES,
         http_client: httpx.AsyncClient | None = None,
         default_headers: Mapping[str, str] | None = None,
@@ -95,15 +98,21 @@ class AsyncWebshare(BaseClient):
         if unauthenticated:
             self._credentials_provider = None
         elif credentials_provider is not None:
+            if api_key is not None:
+                raise conflicting_credentials_error()
             self._credentials_provider = credentials_provider
         else:
             key = resolve_static_api_key(api_key)
             if key is None:
                 raise missing_credentials_error()
             self._credentials_provider = lambda: key
-        self._http = http_client if http_client is not None else httpx.AsyncClient()
+        self._http = (
+            http_client if http_client is not None else httpx.AsyncClient(follow_redirects=True)
+        )
         self._owns_http = http_client is None
-        self._defer_timeout_to_http_client = http_client is not None and timeout is None
+        self._defer_timeout_to_http_client = http_client is not None and isinstance(
+            timeout, _NotGiven
+        )
 
         self.proxies = AsyncProxies(self)
         self.proxy_config = AsyncProxyConfigResource(self)

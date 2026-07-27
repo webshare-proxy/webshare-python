@@ -138,8 +138,10 @@ def encode_query(params: Mapping[str, QueryValue] | None) -> dict[str, str]:
             out[key] = value
         elif isinstance(value, (int, float)):
             out[key] = str(value)
-        else:
+        elif value:
             out[key] = ",".join(str(item) for item in value)
+        # An empty sequence is omitted rather than sent as `?key=` (DRF reads
+        # that as "filter on empty string", not "no filter").
     return out
 
 
@@ -155,11 +157,19 @@ _DEFAULT_PORTS = {"http": 80, "https": 443}
 
 
 def same_origin(url_a: str, url_b: str) -> bool:
-    """Whether two URLs share an origin (scheme + host + port)."""
+    """Whether two URLs share an origin (scheme + host + port).
+
+    A malformed port (out of range or non-numeric) makes ``SplitResult.port``
+    raise ``ValueError``; treated as a non-matching origin rather than
+    propagating a bare ``ValueError``.
+    """
     a, b = urlsplit(url_a), urlsplit(url_b)
     scheme_a, scheme_b = a.scheme.lower(), b.scheme.lower()
-    port_a = a.port if a.port is not None else _DEFAULT_PORTS.get(scheme_a)
-    port_b = b.port if b.port is not None else _DEFAULT_PORTS.get(scheme_b)
+    try:
+        port_a = a.port if a.port is not None else _DEFAULT_PORTS.get(scheme_a)
+        port_b = b.port if b.port is not None else _DEFAULT_PORTS.get(scheme_b)
+    except ValueError:
+        return False
     host_a = (a.hostname or "").lower()
     host_b = (b.hostname or "").lower()
     return scheme_a == scheme_b and host_a == host_b and port_a == port_b
@@ -170,6 +180,20 @@ def truncate_text(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[:limit] + "... (truncated)"
+
+
+def truncate_utf8_bytes(text: str, limit: int) -> str:
+    """Truncate ``text`` to at most ``limit`` UTF-8 encoded bytes.
+
+    A character-count slice of multi-byte text (e.g. CJK) can keep several
+    times more than ``limit`` bytes; this slices the encoded form instead,
+    dropping a trailing partial multi-byte sequence if the cut lands
+    mid-character.
+    """
+    encoded = text.encode("utf-8")
+    if len(encoded) <= limit:
+        return text
+    return encoded[:limit].decode("utf-8", errors="ignore")
 
 
 def drop_json_nulls(body: Mapping[str, Any]) -> dict[str, Any]:
@@ -365,7 +389,7 @@ def make_api_error(
     non-JSON bodies are all accepted. The captured body is capped at 1 MiB and
     the human-facing detail truncated to ~2 KB.
     """
-    body_text = body_text[:MAX_ERROR_BODY_BYTES]
+    body_text = truncate_utf8_bytes(body_text, MAX_ERROR_BODY_BYTES)
     parsed: object
     try:
         parsed = json.loads(body_text) if body_text else None
@@ -390,6 +414,13 @@ def make_api_error(
             messages = _extract_field_messages(value)
             if messages:
                 field_errors[key] = messages
+    elif isinstance(parsed, list):
+        # A bare JSON array (rather than the documented `{"detail": ...}` or
+        # field-error map shapes): still surface something human-readable
+        # instead of falling through to the generic "HTTP N error" message.
+        messages = _extract_field_messages(parsed)
+        if messages:
+            detail = " ".join(messages)
     elif parsed is None and body_text:
         detail = body_text
 
