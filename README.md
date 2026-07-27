@@ -30,11 +30,13 @@ Async variant:
 import asyncio
 import webshare
 
+
 async def main() -> None:
     async with webshare.AsyncWebshare() as client:
         page = await client.proxies.list(mode="direct")
         async for proxy in page:
             print(f"{proxy.proxy_address}:{proxy.port}")
+
 
 asyncio.run(main())
 ```
@@ -53,9 +55,7 @@ with webshare.Webshare() as client:
     config = client.proxy_config.get(plan_id=plan.id)
     stats = client.proxy_config.get_stats(plan_id=plan.id)
     status = client.proxy_config.get_status(plan_id=plan.id)
-    url = client.proxies.download_url(
-        config.proxy_list_download_token, plan_id=plan.id
-    )
+    url = client.proxies.download_url(config.proxy_list_download_token, plan_id=plan.id)
 ```
 
 The plan id is also visible in the dashboard URL when viewing a plan. The
@@ -107,11 +107,11 @@ object yields items across all pages automatically:
 
 ```python
 page = client.proxies.list(mode="direct", page_size=100)
-print(page.count)          # total number of results
-for proxy in page:         # iterates across every page
+print(page.count)  # total number of results
+for proxy in page:  # iterates across every page
     ...
 
-next_page = page.next_page()   # or fetch one page at a time
+next_page = page.next_page()  # or fetch one page at a time
 ```
 
 The async client works the same way with `async for` and
@@ -194,15 +194,20 @@ from webshare import build_proxy_url
 
 # Backbone mode with country targeting and a sticky session
 url = build_proxy_url(
-    username="user", password="pass",
-    country_codes=["US"], session_id=1234,
+    username="user",
+    password="pass",
+    country_codes=["US"],
+    session_id=1234,
 )
 # -> "http://user-us-1234:pass@p.webshare.io:80"
 
 # Direct mode using an entry from client.proxies.list()
 url = build_proxy_url(
-    mode="direct", username=proxy.username, password=proxy.password,
-    proxy_address=proxy.proxy_address, port=proxy.port,
+    mode="direct",
+    username=proxy.username,
+    password=proxy.password,
+    proxy_address=proxy.proxy_address,
+    port=proxy.port,
 )
 ```
 

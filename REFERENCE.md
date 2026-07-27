@@ -14,8 +14,8 @@ when omitted).
 ## Clients
 
 ```python
-webshare.Webshare(...)        # synchronous client
-webshare.AsyncWebshare(...)   # asynchronous client (same options)
+webshare.Webshare(...)  # synchronous client
+webshare.AsyncWebshare(...)  # asynchronous client (same options)
 ```
 
 Constructor options: `api_key` (falls back to `WEBSHARE_API_KEY`),
