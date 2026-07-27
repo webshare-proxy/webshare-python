@@ -6,6 +6,7 @@ plus singleton getters for suspension, categories, limits and thresholds.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Literal
@@ -43,8 +44,10 @@ def _flows_get_spec(id: int) -> RequestSpec:
 
 
 def _submit_evidence_spec(
-    id: int, *, explanation: str | None, files: Sequence[FileInput] | None
+    id: int, *, explanation: str | None, buffered_files: list[tuple[str, bytes]] | None
 ) -> RequestSpec:
+    if explanation is None and not buffered_files:
+        raise ValueError("submit_evidence requires at least one of `explanation` or `files`.")
     data: dict[str, str] = {}
     if explanation is not None:
         data["explanation"] = explanation
@@ -52,8 +55,9 @@ def _submit_evidence_spec(
         method="POST",
         path=f"/api/v2/verification/flow/{id}/submit_evidence/",
         multipart_data=data,
-        # Buffered here so retried attempts re-send the same bytes.
-        multipart_files=buffer_files(files) if files is not None else None,
+        # Buffered by the caller (sync or async) so retried attempts re-send
+        # the same bytes.
+        multipart_files=buffered_files,
     )
 
 
@@ -95,14 +99,15 @@ def _questions_list_spec(
 
 
 def _submit_answer_spec(
-    question_id: int, *, answer: str, files: Sequence[FileInput] | None
+    question_id: int, *, answer: str, buffered_files: list[tuple[str, bytes]] | None
 ) -> RequestSpec:
     return RequestSpec(
         method="POST",
         path=f"/api/v2/verification/question/{question_id}/answer/",
         multipart_data={"answer": answer},
-        # Buffered here so retried attempts re-send the same bytes.
-        multipart_files=buffer_files(files) if files is not None else None,
+        # Buffered by the caller (sync or async) so retried attempts re-send
+        # the same bytes.
+        multipart_files=buffered_files,
     )
 
 
@@ -201,10 +206,12 @@ class VerificationFlows(SyncResource):
         """Submit evidence for a verification flow (multipart/form-data).
 
         ``files`` accepts file paths, bytes, binary file objects or
-        ``(filename, content)`` tuples.
+        ``(filename, content)`` tuples. At least one of ``explanation`` or
+        ``files`` is required.
         """
+        buffered = buffer_files(files) if files is not None else None
         return self._client.request_model(
-            _submit_evidence_spec(id, explanation=explanation, files=files).with_options(
+            _submit_evidence_spec(id, explanation=explanation, buffered_files=buffered).with_options(
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             VerificationFlow,
@@ -279,8 +286,9 @@ class VerificationQuestions(SyncResource):
         federated_user_id: int | str | None = None,
     ) -> VerificationAnswer:
         """Submit an answer with optional attachments (multipart/form-data)."""
+        buffered = buffer_files(files) if files is not None else None
         return self._client.request_model(
-            _submit_answer_spec(question_id, answer=answer, files=files).with_options(
+            _submit_answer_spec(question_id, answer=answer, buffered_files=buffered).with_options(
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             VerificationAnswer,
@@ -475,9 +483,15 @@ class AsyncVerificationFlows(AsyncResource):
         subuser_id: int | str | None = None,
         federated_user_id: int | str | None = None,
     ) -> VerificationFlow:
-        """Submit evidence for a verification flow (multipart/form-data)."""
+        """Submit evidence for a verification flow (multipart/form-data).
+
+        At least one of ``explanation`` or ``files`` is required. File
+        buffering is offloaded to a worker thread so reading large/slow files
+        does not block the event loop.
+        """
+        buffered = await asyncio.to_thread(buffer_files, files) if files is not None else None
         return await self._client.request_model(
-            _submit_evidence_spec(id, explanation=explanation, files=files).with_options(
+            _submit_evidence_spec(id, explanation=explanation, buffered_files=buffered).with_options(
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             VerificationFlow,
@@ -550,9 +564,14 @@ class AsyncVerificationQuestions(AsyncResource):
         subuser_id: int | str | None = None,
         federated_user_id: int | str | None = None,
     ) -> VerificationAnswer:
-        """Submit an answer with optional attachments (multipart/form-data)."""
+        """Submit an answer with optional attachments (multipart/form-data).
+
+        File buffering is offloaded to a worker thread so reading large/slow
+        files does not block the event loop.
+        """
+        buffered = await asyncio.to_thread(buffer_files, files) if files is not None else None
         return await self._client.request_model(
-            _submit_answer_spec(question_id, answer=answer, files=files).with_options(
+            _submit_answer_spec(question_id, answer=answer, buffered_files=buffered).with_options(
                 timeout, headers, max_retries, subuser_id, federated_user_id
             ),
             VerificationAnswer,
