@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 import pytest
 
 import webshare
@@ -17,8 +18,8 @@ PROFILE = {"id": 1, "email": "user@webshare.io"}
 def test_retry_on_429_honors_retry_after(server: MockServer, no_sleep: list[float]) -> None:
     server.enqueue(status=429, json_body={"detail": "throttled"}, headers={"Retry-After": "3"})
     server.enqueue(json_body=PROFILE)
-    client = Webshare(base_url=server.base_url, api_key="k")
-    profile = client.profile.get()
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        profile = client.profile.get()
     assert profile.id == 1
     assert len(server.requests) == 2
     assert no_sleep == [3.0]
@@ -28,8 +29,8 @@ def test_retry_on_5xx(server: MockServer, no_sleep: list[float]) -> None:
     server.enqueue(status=500, text="oops")
     server.enqueue(status=503, text="oops")
     server.enqueue(json_body=PROFILE)
-    client = Webshare(base_url=server.base_url, api_key="k")
-    assert client.profile.get().id == 1
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        assert client.profile.get().id == 1
     assert len(server.requests) == 3
     assert len(no_sleep) == 2
 
@@ -37,33 +38,33 @@ def test_retry_on_5xx(server: MockServer, no_sleep: list[float]) -> None:
 def test_retries_exhausted(server: MockServer, no_sleep: list[float]) -> None:
     for _ in range(3):
         server.enqueue(status=429, json_body={"detail": "throttled"})
-    client = Webshare(base_url=server.base_url, api_key="k", max_retries=2)
-    with pytest.raises(webshare.RateLimitError):
-        client.profile.get()
+    with Webshare(base_url=server.base_url, api_key="k", max_retries=2) as client:
+        with pytest.raises(webshare.RateLimitError):
+            client.profile.get()
     assert len(server.requests) == 3
 
 
 def test_no_retry_on_post(server: MockServer, no_sleep: list[float]) -> None:
     server.enqueue(status=500, text="oops")
-    client = Webshare(base_url=server.base_url, api_key="k")
-    with pytest.raises(webshare.InternalServerError):
-        client.proxies.refresh()
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        with pytest.raises(webshare.InternalServerError):
+            client.proxies.refresh()
     assert len(server.requests) == 1
 
 
 def test_post_retry_opt_in(server: MockServer, no_sleep: list[float]) -> None:
     server.enqueue(status=503, text="oops")
     server.enqueue(status=204)
-    client = Webshare(base_url=server.base_url, api_key="k", retry_non_idempotent=True)
-    client.proxies.refresh()
+    with Webshare(base_url=server.base_url, api_key="k", retry_non_idempotent=True) as client:
+        client.proxies.refresh()
     assert len(server.requests) == 2
 
 
 def test_per_request_max_retries_override(server: MockServer, no_sleep: list[float]) -> None:
     server.enqueue(status=500, text="oops")
-    client = Webshare(base_url=server.base_url, api_key="k", max_retries=2)
-    with pytest.raises(webshare.InternalServerError):
-        client.profile.get(max_retries=0)
+    with Webshare(base_url=server.base_url, api_key="k", max_retries=2) as client:
+        with pytest.raises(webshare.InternalServerError):
+            client.profile.get(max_retries=0)
     assert len(server.requests) == 1
 
 
@@ -83,9 +84,9 @@ def test_multipart_retry_replays_file_bytes(
     evidence.write_bytes(b"replayable-bytes")
     server.enqueue(status=503, text="oops")
     server.enqueue(json_body={"id": 1, "type": "abuse_report", "state": "inflow"})
-    client = Webshare(base_url=server.base_url, api_key="k", retry_non_idempotent=True)
-    with evidence.open("rb") as handle:
-        flow = client.verification.flows.submit_evidence(1, explanation="x", files=[handle])
+    with Webshare(base_url=server.base_url, api_key="k", retry_non_idempotent=True) as client:
+        with evidence.open("rb") as handle:
+            flow = client.verification.flows.submit_evidence(1, explanation="x", files=[handle])
     assert flow.id == 1
     assert len(server.requests) == 2
     # The file object was buffered at request-build time, so the retried
@@ -100,9 +101,9 @@ def test_retry_after_exposed_on_non_retried_error(
     # POST is not retried by default; the parsed Retry-After is surfaced so
     # the caller can self-throttle.
     server.enqueue(status=429, json_body={"detail": "throttled"}, headers={"Retry-After": "7"})
-    client = Webshare(base_url=server.base_url, api_key="k")
-    with pytest.raises(webshare.RateLimitError) as excinfo:
-        client.proxies.refresh()
+    with Webshare(base_url=server.base_url, api_key="k") as client:
+        with pytest.raises(webshare.RateLimitError) as excinfo:
+            client.proxies.refresh()
     assert excinfo.value.retry_after == 7.0
     assert len(server.requests) == 1
 
@@ -145,3 +146,34 @@ def test_compute_backoff_bounds() -> None:
         for _ in range(50):
             delay = compute_backoff(attempt)
             assert 0 <= delay <= min(8.0, 0.5 * (2**attempt))
+
+
+def test_connection_error_mapped_and_retried(no_sleep: list[float]) -> None:
+    calls = {"n": 0}
+
+    def fake_request(method: str, url: str, **kwargs: object) -> httpx.Response:
+        calls["n"] += 1
+        raise httpx.ConnectError("boom")
+
+    with Webshare(base_url="http://example.invalid", api_key="k") as client:
+        client._http.request = fake_request  # type: ignore[assignment]
+        with pytest.raises(webshare.APIConnectionError):
+            client.profile.get()
+    # max_retries defaults to 2 -> 3 attempts total.
+    assert calls["n"] == 3
+    assert len(no_sleep) == 2
+
+
+async def test_async_connection_error_mapped_and_retried(no_sleep: list[float]) -> None:
+    calls = {"n": 0}
+
+    async def fake_request(method: str, url: str, **kwargs: object) -> httpx.Response:
+        calls["n"] += 1
+        raise httpx.ConnectError("boom")
+
+    async with AsyncWebshare(base_url="http://example.invalid", api_key="k") as client:
+        client._http.request = fake_request  # type: ignore[assignment]
+        with pytest.raises(webshare.APIConnectionError):
+            await client.profile.get()
+    assert calls["n"] == 3
+    assert len(no_sleep) == 2

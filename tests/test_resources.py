@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -12,8 +14,9 @@ from webshare import Webshare
 
 
 @pytest.fixture
-def client(server: MockServer) -> Webshare:
-    return Webshare(base_url=server.base_url, api_key="k")
+def client(server: MockServer) -> Iterator[Webshare]:
+    with Webshare(base_url=server.base_url, api_key="k") as c:
+        yield c
 
 
 def test_proxies_list_decodes_models(server: MockServer, client: Webshare) -> None:
@@ -257,3 +260,248 @@ def test_ip_authorization_roundtrip(server: MockServer, client: Webshare) -> Non
     client.ip_authorizations.delete(1337)
     assert server.requests[2].method == "DELETE"
     assert server.requests[2].path == "/api/v2/proxy/ipauthorization/1337/"
+
+
+# -- Table-driven request-shape coverage for the previously-untested thin
+# wrappers: billing, transactions, plans, profile preferences, proxy
+# replacements, replaced proxies, referral, notifications, subusers
+# create/update/delete, proxy_config stats/status. Each case checks that the
+# method sends the right method/path/query/body, not the response decoding
+# (already covered above and in test_models.py).
+
+_NO_BODY = object()
+_EMPTY_PAGE: dict[str, object] = {"count": 0, "next": None, "previous": None, "results": []}
+
+
+@dataclass
+class _Case:
+    label: str
+    call: Callable[[Webshare], object]
+    method: str
+    path: str
+    query: dict[str, list[str]] = field(default_factory=dict)
+    body: object = _NO_BODY
+    response: object = field(default_factory=dict)
+
+
+REQUEST_SHAPE_CASES = [
+    _Case("billing.get_info", lambda c: c.billing.get_info(), "GET", "/api/v2/subscription/billing_info/"),
+    _Case(
+        "billing.update_info",
+        lambda c: c.billing.update_info(name="Acme"),
+        "PATCH",
+        "/api/v2/subscription/billing_info/",
+        body={"name": "Acme"},
+    ),
+    _Case(
+        "transactions.list",
+        lambda c: c.transactions.list(page=2),
+        "GET",
+        "/api/v2/payment/transaction/",
+        query={"page": ["2"]},
+        response=_EMPTY_PAGE,
+    ),
+    _Case("transactions.get", lambda c: c.transactions.get(5), "GET", "/api/v2/payment/transaction/5/"),
+    _Case("plans.list", lambda c: c.plans.list(), "GET", "/api/v2/subscription/plan/", response=_EMPTY_PAGE),
+    _Case("plans.get", lambda c: c.plans.get(9), "GET", "/api/v2/subscription/plan/9/"),
+    _Case(
+        "plans.update (no kwargs is a no-op, not a null-clearing PATCH)",
+        lambda c: c.plans.update(9),
+        "PATCH",
+        "/api/v2/subscription/plan/9/",
+        body={},
+    ),
+    _Case(
+        "plans.update (with value)",
+        lambda c: c.plans.update(9, automatic_refresh_next_at="2024-01-01T00:00:00Z"),
+        "PATCH",
+        "/api/v2/subscription/plan/9/",
+        body={"automatic_refresh_next_at": "2024-01-01T00:00:00Z"},
+    ),
+    _Case("plans.cancel", lambda c: c.plans.cancel(9), "POST", "/api/v2/subscription/plan/9/cancel/"),
+    _Case(
+        "profile.get_preferences",
+        lambda c: c.profile.get_preferences(),
+        "GET",
+        "/api/v2/profile/preferences/",
+    ),
+    _Case(
+        "profile.update_preferences",
+        lambda c: c.profile.update_preferences(onboarding_activity_page_viewed_at="2024-01-01T00:00:00Z"),
+        "PATCH",
+        "/api/v2/profile/preferences/",
+        body={"onboarding_activity_page_viewed_at": "2024-01-01T00:00:00Z"},
+    ),
+    _Case(
+        "proxy_replacements.list",
+        lambda c: c.proxy_replacements.list(),
+        "GET",
+        "/api/v3/proxy/replace/",
+        response=_EMPTY_PAGE,
+    ),
+    _Case(
+        "proxy_replacements.create",
+        lambda c: c.proxy_replacements.create(
+            to_replace={"type": "ip_address", "ip_address": "1.2.3.4"},
+            replace_with=[{"type": "any"}],
+        ),
+        "POST",
+        "/api/v3/proxy/replace/",
+        body={
+            "to_replace": {"type": "ip_address", "ip_address": "1.2.3.4"},
+            "replace_with": [{"type": "any"}],
+        },
+    ),
+    _Case("proxy_replacements.get", lambda c: c.proxy_replacements.get(3), "GET", "/api/v3/proxy/replace/3/"),
+    _Case(
+        "replaced_proxies.list",
+        lambda c: c.replaced_proxies.list(),
+        "GET",
+        "/api/v2/proxy/list/replaced/",
+        response=_EMPTY_PAGE,
+    ),
+    _Case(
+        # Country codes are normalized to uppercase like proxies.download.
+        "replaced_proxies.download",
+        lambda c: c.replaced_proxies.download(
+            download_token="tok", country_codes=["us"], authentication_type="username", mode="direct"
+        ),
+        "GET",
+        "/api/v2/proxy/list/replaced/download/",
+        query={
+            "download_token": ["tok"],
+            "country_codes": ["US"],
+            "authentication_type": ["username"],
+            "mode": ["direct"],
+            "proxy_protocol": ["any"],
+        },
+        response="",
+    ),
+    _Case("referral.get_config", lambda c: c.referral.get_config(), "GET", "/api/v2/referral/config/"),
+    _Case(
+        "referral.update_config",
+        lambda c: c.referral.update_config(mode="credits"),
+        "PATCH",
+        "/api/v2/referral/config/",
+        body={"mode": "credits"},
+    ),
+    _Case(
+        "referral.get_coupon_code", lambda c: c.referral.get_coupon_code(), "GET", "/api/v2/referral/coupon-code/"
+    ),
+    _Case(
+        "referral.apply_coupon_code",
+        lambda c: c.referral.apply_coupon_code(code="X"),
+        "POST",
+        "/api/v2/referral/coupon-code/",
+        body={"code": "X"},
+    ),
+    _Case(
+        "referral.remove_coupon_code",
+        lambda c: c.referral.remove_coupon_code(),
+        "DELETE",
+        "/api/v2/referral/coupon-code/",
+    ),
+    _Case(
+        "referral.list_credits",
+        lambda c: c.referral.list_credits(),
+        "GET",
+        "/api/v2/referral/credit/",
+        response=_EMPTY_PAGE,
+    ),
+    _Case("referral.get_credit", lambda c: c.referral.get_credit(4), "GET", "/api/v2/referral/credit/4/"),
+    _Case(
+        # Verified against the live API: the earnout list path needs a
+        # trailing slash or the server 301s it.
+        "referral.list_earnouts",
+        lambda c: c.referral.list_earnouts(),
+        "GET",
+        "/api/v2/referral/earnout/",
+        response=_EMPTY_PAGE,
+    ),
+    _Case("referral.get_earnout", lambda c: c.referral.get_earnout(2), "GET", "/api/v2/referral/earnout/2/"),
+    _Case(
+        "notifications.list",
+        lambda c: c.notifications.list(),
+        "GET",
+        "/api/v2/notification/",
+        response=_EMPTY_PAGE,
+    ),
+    _Case("notifications.get", lambda c: c.notifications.get(7), "GET", "/api/v2/notification/7/"),
+    _Case(
+        "notifications.restore", lambda c: c.notifications.restore(7), "POST", "/api/v2/notification/7/restore/"
+    ),
+    _Case("subusers.list", lambda c: c.subusers.list(), "GET", "/api/v2/subuser/", response=_EMPTY_PAGE),
+    _Case(
+        "subusers.create",
+        lambda c: c.subusers.create(label="Test"),
+        "POST",
+        "/api/v2/subuser/",
+        body={"label": "Test"},
+    ),
+    _Case("subusers.get", lambda c: c.subusers.get(2), "GET", "/api/v2/subuser/2/"),
+    _Case(
+        "subusers.update",
+        lambda c: c.subusers.update(2, label="New"),
+        "PATCH",
+        "/api/v2/subuser/2/",
+        body={"label": "New"},
+    ),
+    _Case(
+        "subusers.delete",
+        lambda c: c.subusers.delete(2),
+        "DELETE",
+        "/api/v2/subuser/2/",
+        response="",
+    ),
+    _Case(
+        "subusers.refresh_proxy_list",
+        lambda c: c.subusers.refresh_proxy_list(2),
+        "POST",
+        "/api/v2/subuser/2/refresh/",
+    ),
+    _Case(
+        "proxy_config.get_stats",
+        lambda c: c.proxy_config.get_stats(plan_id=1),
+        "GET",
+        "/api/v3/proxy/list/stats",
+        query={"plan_id": ["1"]},
+    ),
+    _Case(
+        "proxy_config.get_status",
+        lambda c: c.proxy_config.get_status(plan_id=1),
+        "GET",
+        "/api/v3/proxy/list/status",
+        query={"plan_id": ["1"]},
+    ),
+    _Case(
+        "payment_methods.list",
+        lambda c: c.payment_methods.list(),
+        "GET",
+        "/api/v2/payment/method/",
+        response=_EMPTY_PAGE,
+    ),
+    _Case("payment_methods.get", lambda c: c.payment_methods.get(3), "GET", "/api/v2/payment/method/3/"),
+    _Case(
+        "pending_payments.list",
+        lambda c: c.pending_payments.list(),
+        "GET",
+        "/api/v2/payment/pending/",
+        response=_EMPTY_PAGE,
+    ),
+    _Case("pending_payments.get", lambda c: c.pending_payments.get(3), "GET", "/api/v2/payment/pending/3/"),
+]
+
+
+@pytest.mark.parametrize("case", REQUEST_SHAPE_CASES, ids=[c.label for c in REQUEST_SHAPE_CASES])
+def test_resource_request_shapes(server: MockServer, client: Webshare, case: _Case) -> None:
+    if case.response == "":
+        server.enqueue(status=204)
+    else:
+        server.enqueue(json_body=case.response)
+    case.call(client)
+    request = server.requests[-1]
+    assert request.method == case.method
+    assert request.path == case.path
+    assert request.query == case.query
+    if case.body is not _NO_BODY:
+        assert request.json() == case.body
