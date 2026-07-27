@@ -285,7 +285,12 @@ class _Case:
 
 
 REQUEST_SHAPE_CASES = [
-    _Case("billing.get_info", lambda c: c.billing.get_info(), "GET", "/api/v2/subscription/billing_info/"),
+    _Case(
+        "billing.get_info",
+        lambda c: c.billing.get_info(),
+        "GET",
+        "/api/v2/subscription/billing_info/",
+    ),
     _Case(
         "billing.update_info",
         lambda c: c.billing.update_info(name="Acme"),
@@ -301,8 +306,16 @@ REQUEST_SHAPE_CASES = [
         query={"page": ["2"]},
         response=_EMPTY_PAGE,
     ),
-    _Case("transactions.get", lambda c: c.transactions.get(5), "GET", "/api/v2/payment/transaction/5/"),
-    _Case("plans.list", lambda c: c.plans.list(), "GET", "/api/v2/subscription/plan/", response=_EMPTY_PAGE),
+    _Case(
+        "transactions.get", lambda c: c.transactions.get(5), "GET", "/api/v2/payment/transaction/5/"
+    ),
+    _Case(
+        "plans.list",
+        lambda c: c.plans.list(),
+        "GET",
+        "/api/v2/subscription/plan/",
+        response=_EMPTY_PAGE,
+    ),
     _Case("plans.get", lambda c: c.plans.get(9), "GET", "/api/v2/subscription/plan/9/"),
     _Case(
         "plans.update (no kwargs is a no-op, not a null-clearing PATCH)",
@@ -318,7 +331,9 @@ REQUEST_SHAPE_CASES = [
         "/api/v2/subscription/plan/9/",
         body={"automatic_refresh_next_at": "2024-01-01T00:00:00Z"},
     ),
-    _Case("plans.cancel", lambda c: c.plans.cancel(9), "POST", "/api/v2/subscription/plan/9/cancel/"),
+    _Case(
+        "plans.cancel", lambda c: c.plans.cancel(9), "POST", "/api/v2/subscription/plan/9/cancel/"
+    ),
     _Case(
         "profile.get_preferences",
         lambda c: c.profile.get_preferences(),
@@ -327,7 +342,9 @@ REQUEST_SHAPE_CASES = [
     ),
     _Case(
         "profile.update_preferences",
-        lambda c: c.profile.update_preferences(onboarding_activity_page_viewed_at="2024-01-01T00:00:00Z"),
+        lambda c: c.profile.update_preferences(
+            onboarding_activity_page_viewed_at="2024-01-01T00:00:00Z"
+        ),
         "PATCH",
         "/api/v2/profile/preferences/",
         body={"onboarding_activity_page_viewed_at": "2024-01-01T00:00:00Z"},
@@ -352,7 +369,12 @@ REQUEST_SHAPE_CASES = [
             "replace_with": [{"type": "any"}],
         },
     ),
-    _Case("proxy_replacements.get", lambda c: c.proxy_replacements.get(3), "GET", "/api/v3/proxy/replace/3/"),
+    _Case(
+        "proxy_replacements.get",
+        lambda c: c.proxy_replacements.get(3),
+        "GET",
+        "/api/v3/proxy/replace/3/",
+    ),
     _Case(
         "replaced_proxies.list",
         lambda c: c.replaced_proxies.list(),
@@ -364,7 +386,10 @@ REQUEST_SHAPE_CASES = [
         # Country codes are normalized to uppercase like proxies.download.
         "replaced_proxies.download",
         lambda c: c.replaced_proxies.download(
-            download_token="tok", country_codes=["us"], authentication_type="username", mode="direct"
+            download_token="tok",
+            country_codes=["us"],
+            authentication_type="username",
+            mode="direct",
         ),
         "GET",
         "/api/v2/proxy/list/replaced/download/",
@@ -377,7 +402,9 @@ REQUEST_SHAPE_CASES = [
         },
         response="",
     ),
-    _Case("referral.get_config", lambda c: c.referral.get_config(), "GET", "/api/v2/referral/config/"),
+    _Case(
+        "referral.get_config", lambda c: c.referral.get_config(), "GET", "/api/v2/referral/config/"
+    ),
     _Case(
         "referral.update_config",
         lambda c: c.referral.update_config(mode="credits"),
@@ -386,7 +413,10 @@ REQUEST_SHAPE_CASES = [
         body={"mode": "credits"},
     ),
     _Case(
-        "referral.get_coupon_code", lambda c: c.referral.get_coupon_code(), "GET", "/api/v2/referral/coupon-code/"
+        "referral.get_coupon_code",
+        lambda c: c.referral.get_coupon_code(),
+        "GET",
+        "/api/v2/referral/coupon-code/",
     ),
     _Case(
         "referral.apply_coupon_code",
@@ -408,7 +438,12 @@ REQUEST_SHAPE_CASES = [
         "/api/v2/referral/credit/",
         response=_EMPTY_PAGE,
     ),
-    _Case("referral.get_credit", lambda c: c.referral.get_credit(4), "GET", "/api/v2/referral/credit/4/"),
+    _Case(
+        "referral.get_credit",
+        lambda c: c.referral.get_credit(4),
+        "GET",
+        "/api/v2/referral/credit/4/",
+    ),
     _Case(
         # Verified against the live API: the earnout list path needs a
         # trailing slash or the server 301s it.
@@ -418,7 +453,12 @@ REQUEST_SHAPE_CASES = [
         "/api/v2/referral/earnout/",
         response=_EMPTY_PAGE,
     ),
-    _Case("referral.get_earnout", lambda c: c.referral.get_earnout(2), "GET", "/api/v2/referral/earnout/2/"),
+    _Case(
+        "referral.get_earnout",
+        lambda c: c.referral.get_earnout(2),
+        "GET",
+        "/api/v2/referral/earnout/2/",
+    ),
     _Case(
         "notifications.list",
         lambda c: c.notifications.list(),
@@ -428,9 +468,18 @@ REQUEST_SHAPE_CASES = [
     ),
     _Case("notifications.get", lambda c: c.notifications.get(7), "GET", "/api/v2/notification/7/"),
     _Case(
-        "notifications.restore", lambda c: c.notifications.restore(7), "POST", "/api/v2/notification/7/restore/"
+        "notifications.restore",
+        lambda c: c.notifications.restore(7),
+        "POST",
+        "/api/v2/notification/7/restore/",
     ),
-    _Case("subusers.list", lambda c: c.subusers.list(), "GET", "/api/v2/subuser/", response=_EMPTY_PAGE),
+    _Case(
+        "subusers.list",
+        lambda c: c.subusers.list(),
+        "GET",
+        "/api/v2/subuser/",
+        response=_EMPTY_PAGE,
+    ),
     _Case(
         "subusers.create",
         lambda c: c.subusers.create(label="Test"),
@@ -480,7 +529,12 @@ REQUEST_SHAPE_CASES = [
         "/api/v2/payment/method/",
         response=_EMPTY_PAGE,
     ),
-    _Case("payment_methods.get", lambda c: c.payment_methods.get(3), "GET", "/api/v2/payment/method/3/"),
+    _Case(
+        "payment_methods.get",
+        lambda c: c.payment_methods.get(3),
+        "GET",
+        "/api/v2/payment/method/3/",
+    ),
     _Case(
         "pending_payments.list",
         lambda c: c.pending_payments.list(),
@@ -488,7 +542,12 @@ REQUEST_SHAPE_CASES = [
         "/api/v2/payment/pending/",
         response=_EMPTY_PAGE,
     ),
-    _Case("pending_payments.get", lambda c: c.pending_payments.get(3), "GET", "/api/v2/payment/pending/3/"),
+    _Case(
+        "pending_payments.get",
+        lambda c: c.pending_payments.get(3),
+        "GET",
+        "/api/v2/payment/pending/3/",
+    ),
 ]
 
 

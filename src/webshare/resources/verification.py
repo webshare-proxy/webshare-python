@@ -211,9 +211,9 @@ class VerificationFlows(SyncResource):
         """
         buffered = buffer_files(files) if files is not None else None
         return self._client.request_model(
-            _submit_evidence_spec(id, explanation=explanation, buffered_files=buffered).with_options(
-                timeout, headers, max_retries, subuser_id, federated_user_id
-            ),
+            _submit_evidence_spec(
+                id, explanation=explanation, buffered_files=buffered
+            ).with_options(timeout, headers, max_retries, subuser_id, federated_user_id),
             VerificationFlow,
         )
 
@@ -491,9 +491,9 @@ class AsyncVerificationFlows(AsyncResource):
         """
         buffered = await asyncio.to_thread(buffer_files, files) if files is not None else None
         return await self._client.request_model(
-            _submit_evidence_spec(id, explanation=explanation, buffered_files=buffered).with_options(
-                timeout, headers, max_retries, subuser_id, federated_user_id
-            ),
+            _submit_evidence_spec(
+                id, explanation=explanation, buffered_files=buffered
+            ).with_options(timeout, headers, max_retries, subuser_id, federated_user_id),
             VerificationFlow,
         )
 
