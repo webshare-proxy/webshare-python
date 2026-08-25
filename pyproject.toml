@@ -1,5 +1,8 @@
 [build-system]
-requires = ["hatchling>=1.27"]
+# Pinned to 1.27.0: it emits Metadata-Version 2.4 (accepted by PyPI and by
+# `twine check`). Hatchling >= 1.28 emits Metadata-Version 2.5, which current
+# twine/packaging reject as invalid. Bump once the toolchain supports 2.5.
+requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
