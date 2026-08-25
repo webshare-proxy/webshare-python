@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "webshare-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "Official Python SDK for the Webshare proxy API"
 readme = "README.md"
 license = "MIT"
