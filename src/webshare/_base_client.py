@@ -114,8 +114,8 @@ class BaseClient:
         self.federated_user_id = federated_user_id
         self.retry_non_idempotent = retry_non_idempotent
         self.user_agent = f"webshare-python/{__version__}"
-        # X-Webshare-Source identifies the caller for API-side tracking; the
-        # `source` option replaces the whole value.
+        # The product token leading the User-Agent identifies the caller for API-side
+        # tracking; the `source` option replaces that token.
         self.source = source or (f"WebshareSDK/{__version__} (Python; {platform.python_version()})")
         # When the user injects an http_client without an explicit timeout,
         # the injected client's own timeout configuration is respected.

@@ -27,7 +27,7 @@ def test_auth_header_and_defaults(server: MockServer) -> None:
     assert request.path == "/api/v2/profile/"
     assert request.headers["Authorization"] == "Token test-key"
     assert request.headers["Accept"] == "application/json"
-    assert request.headers["User-Agent"] == f"webshare-python/{webshare.__version__}"
+    assert request.headers["User-Agent"].endswith(f" webshare-python/{webshare.__version__}")
 
 
 def test_api_key_from_environment(server: MockServer, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -178,25 +178,30 @@ def test_unauthenticated_client(server: MockServer, monkeypatch: pytest.MonkeyPa
     assert len(server.requests) == 1
 
 
-def test_source_header_default_format(server: MockServer) -> None:
+def test_user_agent_default_format(server: MockServer) -> None:
     import re
 
     server.enqueue(json_body=PROFILE)
     with make_client(server) as client:
         client.profile.get()
-    source = server.requests[0].headers["X-Webshare-Source"]
-    assert re.fullmatch(r"WebshareSDK/\d+\.\d+\.\d+ \(Python; \d+\.\d+\.\d+[^)]*\)", source), source
+    user_agent = server.requests[0].headers["User-Agent"]
+    pattern = (
+        r"WebshareSDK/\d+\.\d+\.\d+ \(Python; \d+\.\d+\.\d+[^)]*\) webshare-python/\d+\.\d+\.\d+"
+    )
+    assert re.fullmatch(pattern, user_agent), user_agent
+    assert "X-Webshare-Source" not in server.requests[0].headers
 
 
-def test_source_header_override(server: MockServer) -> None:
+def test_user_agent_product_token_override(server: MockServer) -> None:
     server.enqueue(json_body=PROFILE)
     server.enqueue(json_body=PROFILE)
     with make_client(server, source="WebshareCLI/1.2.3") as client:
         client.profile.get()
-        assert server.requests[0].headers["X-Webshare-Source"] == "WebshareCLI/1.2.3"
+        expected = f"WebshareCLI/1.2.3 webshare-python/{webshare.__version__}"
+        assert server.requests[0].headers["User-Agent"] == expected
         # Per-request headers still win over everything.
-        client.profile.get(headers={"X-Webshare-Source": "custom/0"})
-        assert server.requests[1].headers["X-Webshare-Source"] == "custom/0"
+        client.profile.get(headers={"User-Agent": "custom/0"})
+        assert server.requests[1].headers["User-Agent"] == "custom/0"
 
 
 def test_default_headers_merge_case_insensitively(server: MockServer) -> None:

@@ -92,8 +92,8 @@ class Webshare(BaseClient):
         unauthenticated: Construct a credential-free client for the handful
             of unauthenticated endpoints; calling an authenticated operation
             on such a client raises ``WebshareError``.
-        source: Replaces the ``X-Webshare-Source`` caller-identification
-            header (default ``WebshareSDK/<version> (Python; <runtime>)``).
+        source: Replaces the caller-identification product token that leads the
+            ``User-Agent`` (default ``WebshareSDK/<version> (Python; <runtime>)``).
     """
 
     def __init__(
