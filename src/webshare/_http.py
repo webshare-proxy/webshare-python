@@ -241,8 +241,9 @@ def build_headers(
     """
     headers: dict[str, str] = {
         "Accept": "application/json",
-        "User-Agent": user_agent,
-        "X-Webshare-Source": source,
+        # The product token leads, so the API can tell a tool built on the SDK from a
+        # plain SDK call; the library that carried it follows.
+        "User-Agent": f"{source} {user_agent}",
     }
     if has_json_body:
         headers["Content-Type"] = "application/json"

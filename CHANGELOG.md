@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
 
+### Changed
+
+- The caller identification moved from the `X-Webshare-Source` header into `User-Agent`, which now leads with the product token and ends with the library: `WebshareSDK/<version> (Python; <python version>) webshare-python/<version>`. The `source` client option is unchanged and still replaces that product token.
+
 ## [0.1.1] - 2026-08-25
 
 ### Changed

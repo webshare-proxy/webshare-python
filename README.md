@@ -220,13 +220,14 @@ url = build_proxy_url(
 URL from the config's `proxy_list_download_token`;
 `client.proxies.download(...)` fetches it directly and returns the text.
 
-## Identification header
+## Identification
 
-Every request carries an `X-Webshare-Source` header identifying the caller
-for API-side tracking. It names only the SDK and the Python runtime version
-(default `WebshareSDK/<version> (Python; <python version>)`) — no user data.
-Tools built on the SDK can replace it via the `source` client option, and
-per-request headers override it as usual.
+Every request carries a `User-Agent` that leads with a product token
+identifying the caller for API-side tracking, followed by the library:
+`WebshareSDK/<version> (Python; <python version>) webshare-python/<version>`.
+It names only the SDK and the Python runtime, no user data. Tools built on the
+SDK can replace the product token via the `source` client option, and
+per-request headers override the whole header as usual.
 
 ## Supported versions
 
